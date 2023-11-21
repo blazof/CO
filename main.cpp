@@ -210,7 +210,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
         }
     }
 
-
+// ACTCTTTCACGGACTACACACTGTGGCAGCGATTCCAGTACCGCGCCAAGCGCACAGTAGAAGTTAGTACGCGTTTAGTCTGAGATAGAATAACGTTTCTAAGGTCCTAGAGGATGTTTGGCGGTTTACGTCGCACTCAGAATGAATGGCTTTCCAAGCCTGTCCTGGGGTGGAGGCCTATATATGCTGTGCCCGTGTTTCACAAAGTTTTATACAGTTTACACTGACCTGTTCGGCCCGGGATGCTGGCCGTCACAATCTTGCGCAAGTATCAACCGAAACGGGGGGATCTTAGGTAGC
     return uniqueVec;
 }
 
@@ -278,6 +278,7 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
     }
     return positiveErrors;
 }
+
 bool hasUnvisitedAdj(vector<vector<int>> updatedGraph, int V, int index, vector<int> &notVisited){
     for(int i =0; i < V;i++){
         if(updatedGraph[index][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i)!= notVisited.end()){
@@ -295,6 +296,7 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
+
 void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph, vector<int> &seq) {
     bool progress = true; // Ensure progress to avoid infinite loops
     while (progress && !notVisited.empty()) {
@@ -350,6 +352,7 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
         }
     }
 }
+
 void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
     do {
@@ -662,11 +665,11 @@ vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vect
     return sequence;
 }
 
-string ACO(int param, int rankMatrix, int V, string output, vector<vector<int>> updatedGraph, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string &DNA, vector<int> seq) {
+string rankingACO(vector<vector<float>> &finisedMatrix,int param, int rankMatrix, int V, string output, vector<vector<int>> updatedGraph, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string &DNA, vector<int> seq) {
     vector<float> values = {1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1};
     vector<vector<float>> matrix(V, vector<float>(V, 0));
     vector<vector<int>> rankedVertices;
-    vector<int> ones(param, 0);
+    vector<int> ones(param, 0); // param - ile wierzcholkow jest w rankingu
 
     for (int i = 0; i < param; i++) {
         rankedVertices.push_back(greedyAlgorithm(updatedGraph, V, graph, spectrum, index, notVisited, output, DNA, seq));
@@ -712,11 +715,212 @@ string ACO(int param, int rankMatrix, int V, string output, vector<vector<int>> 
     }
 
     matrix = matrixACO(V, rankedVertices, values, rankMatrix);
+    finisedMatrix = matrix;
     return output;
 }
 
+//jako index nalezy przekazac primer!!!!
+void initACO(string DNA,int ants, int smoothing, int interations, float firstDrawPercentage, int index, vector<vector<float>> matrix, vector<vector<int>> graph, int V, vector<string> spectrum, int n) {
+    float drawPercentage = firstDrawPercentage;
+    vector<vector<int>> updatedGraph = graph;
 
-void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string &DNA, vector<int> &seq) {
+    // Rozwiązania dla wszystkich mrówek
+    vector<vector<int>> solutions(ants); // Tworzymy wektor z 'ants' pustymi wektorami wewnętrznymi
+    vector<string> outputs;
+    // Iteracje algorytmu
+    for (int j = 0; j < interations; j++) {
+        drawPercentage = firstDrawPercentage; // Resetowanie wartości drawPercentage dla każdej iteracji
+        // Reset grafu dla nowej iteracji
+
+        // Przejście każdej mrówki
+        for (int i = 0; i < ants; i++) {
+            string output = spectrum[index];
+            bool con = true; // Flaga warunku zakończenia dla mrówki
+            int currentIndex = index; // Kopia początkowego wierzchołka dla każdej mrówki
+            updatedGraph = graph;
+            solutions[i].clear(); // Czyścimy rozwiązanie mrówki (dla nowej dużej iteracji)
+            solutions[i].push_back(currentIndex); // Dodanie początkowego wierzchołka
+
+            while (con) {
+                int drawValue = rand() % 100;
+
+                if (drawValue > drawPercentage) {
+                    // Znalezienie wszystkich możliwych ścieżek z bieżącego wierzchołka
+                    vector<int> possiblePaths;
+
+                    for (int x = 0; x < updatedGraph[currentIndex].size(); x++) {
+                        if (updatedGraph[currentIndex][x] == 1) { // Szukamy ścieżek o wartości 1
+                            for (int y = 0; y < updatedGraph[x].size(); y++) {
+                                if (updatedGraph[x][y] != 0) {
+                                    possiblePaths.push_back(x);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Jeśli nie ma ścieżek o wartości 1, szukamy innych ścieżek
+                    if (possiblePaths.empty()) {
+                        for (int x = 0; x < updatedGraph[currentIndex].size(); x++) {
+                            if (updatedGraph[currentIndex][x] != 0) {
+                                for (int y = 0; y < updatedGraph[x].size(); y++) {
+                                    if (updatedGraph[x][y] != 0) {
+                                        possiblePaths.push_back(x);
+
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Jeśli nadal nie ma dostępnych ścieżek
+                    if (possiblePaths.empty()) {
+                        cout << "Brak ścieżek, tworzymy nowe połączenie!" << endl;
+
+                        bool repeat = true;
+                        while (repeat) {
+                            repeat = false;
+                            int randomVertex = rand() % V;
+
+                            if (contains(solutions[i], randomVertex)) {
+                                repeat = true; // Jeśli już odwiedziliśmy ten wierzchołek, losujemy dalej
+                            } else {
+                                updatedGraph[currentIndex][randomVertex] = 1; // Tworzymy sztuczne połączenie
+                                updatedGraph[randomVertex][currentIndex] = 1; // Graf nieskierowany
+                                currentIndex = randomVertex;
+                                solutions[i].push_back(currentIndex);
+                                output = mergeSequences(output, spectrum[currentIndex]);
+                                cout << "Nowe połączenie: " << currentIndex << endl;
+                            }
+                        }
+
+                    } else {
+                        // Losowy wybór ścieżki z dostępnych
+                        int random = rand() % possiblePaths.size();
+                        int randomIndex = possiblePaths[random];
+                        // Usuwamy krawędzie, aby nie wracać
+
+                        for(int x=0; x < updatedGraph[currentIndex].size(); x++) {
+                            updatedGraph[currentIndex][x] = 0;
+                        }
+                        currentIndex = randomIndex; // Przechodzimy do nowego wierzchołka
+                        solutions[i].push_back(currentIndex); // Dodajemy nowy wierzchołek do rozwiązania
+                        output = mergeSequences(output, spectrum[currentIndex]);
+                        if(output.size() >= n) {
+                        con =false;
+                        }
+                    }
+                }else {
+                    vector<float> rouletteValues;
+                    vector<int> vertices;
+
+                    for(int x = 0; x < matrix[currentIndex].size(); x++) {
+                        if(matrix[currentIndex][x] != 0 &&  updatedGraph[currentIndex][x] != 0) {
+                            rouletteValues.push_back(matrix[currentIndex][x]*10);
+                            vertices.push_back(x);
+                        }
+                    }
+
+                    if(!rouletteValues.empty()) {
+                    vector<int> sum;
+                    sum.push_back(0);
+
+                    cout<<"indexy tych wierzchilkkow"<<endl;
+                    for(int x=0; x<vertices.size(); x++) {
+                        cout<<vertices[x]<<" ";
+                    }cout<<endl;
+
+                    cout<<"warotsci stworzenia do ruletki"<<endl;
+                    for(int x=0; x<rouletteValues.size(); x++) {
+                        cout<<rouletteValues[x]<<" ";
+                    }cout<<endl;
+
+
+
+                    cout<< "tu byla macierz wybrana"<<endl;
+
+                    //wygladzanie wartosci
+
+                        // szukanie najwiekszego:
+                        float biggestIndex = -1;
+                        for(int x=0; x<rouletteValues.size(); x++) {
+                            if(rouletteValues[x] > rouletteValues[biggestIndex]) {
+                                biggestIndex = x;
+                            }
+                        }
+
+                            for(int x =0; x<rouletteValues.size(); x++) {
+                                float difference = rouletteValues[biggestIndex]-rouletteValues[x];
+                                if(difference > smoothing) {
+                                    rouletteValues[x] *=2;
+                                    rouletteValues[biggestIndex] *= 0.9;
+                                }
+
+
+                            }
+                        cout<<"warotsci stworzenia do ruletki"<<endl;
+                        for(int x=0; x<rouletteValues.size(); x++) {
+                            cout<<rouletteValues[x]<<" ";
+                        }cout<<endl;
+
+
+                        sum.push_back(rouletteValues[0]);
+                        for(int x=1; x<vertices.size(); x++) {
+                            sum.push_back(rouletteValues[x] + sum[x]);
+                        }
+
+
+                        cout<<"Sumy ruletka done"<<endl;
+                        for(int x=0; x<sum.size(); x++) {
+                            cout<<sum[x]<<" ";
+                        }cout<<endl;
+
+                    //tutaj szukamy wartosci ktora bedzie miedzy przedzialami bierzemy ostatni index
+                    int rouletteValue = 1 + rand() % sum[sum.size()-1];
+
+                    for(int x=1; x<sum.size(); x++) {
+                        if(rouletteValue <= sum[x] && rouletteValue > sum[x-1]) {
+                        // tutaj nowym indeksem bedzie vertices[x]
+                            int nextIndex = vertices[x-1];
+                            cout<<"Roullete value: "<<rouletteValue<<endl;
+                            cout<<"nast index"<<" "<<endl;
+                            cout<<nextIndex<<" "<<endl;
+                            solutions[i].push_back(nextIndex);
+                            currentIndex = nextIndex;
+                           mergeSequences(output, spectrum[nextIndex]);
+                            for(int x=0; x < updatedGraph[currentIndex].size(); x++) {
+                                updatedGraph[currentIndex][x] = 0;
+                            }
+                        }
+                    }
+                    }else {
+                        cout<<"Brak wierzcholkow z macierzy :<<"<<endl;
+                    }
+                }
+
+                //tutaj ile jest porytego grafu - potrzebne do zwiekszania prawopodobienstwa wyboru macierzy
+                float percentCovered = output.size() / n;
+                drawPercentage = percentCovered*1.5;
+            }
+            outputs.push_back(output);
+            // Wypisanie aktualnej ścieżki mrówki
+            for (int v = 0; v < solutions[i].size(); v++) {
+                cout << solutions[i][v] << " ";
+            }
+            cout << endl;
+            cout<< outputs[i] << endl;
+            cout<<"Lev"<<levenshteinDist(DNA,outputs[i]);
+
+            cout << endl;
+
+
+        }
+    }
+}
+
+
+void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string &DNA, vector<int> &seq, int n) {
 
     vector<vector<int>> vertexSeq;
     while (1){
@@ -749,7 +953,9 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                 break;
             }
             case 2: {
-                cout<< ACO(20,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence)<<endl;
+                vector<vector<float>> matrix(V, vector<float>(V, 0));
+                cout<< rankingACO(matrix,20,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence)<<endl;
+                initACO(DNA,10,20,1,10,index,matrix,graph, V,spectrum, n);
                 break;
             }
             case 3: {
@@ -810,7 +1016,7 @@ int main() {
     cout << "z grafu" << endl;
 
     //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
-    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
+    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq,n);
 
     return 0;
 }
