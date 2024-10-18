@@ -9,7 +9,7 @@ using namespace std;
 
 template <typename T>
 bool contains(const vector<T>& vec, const T& value) {
-    return std::find(vec.begin(), vec.end(), value) != vec.end();
+    return find(vec.begin(), vec.end(), value) != vec.end();
 }
 
 string generateDNA(int n) {
@@ -22,7 +22,7 @@ string generateDNA(int n) {
     return DNA;
 }
 
-vector<string> generateIdealSpectrum(int k, int n, string DNA) {
+vector<string> generateIdealSpectrum(const int k, const int n,const string& DNA) {
     vector<string> idealSpectrum;
     for (int i = 0; i <= n - k; i++) { // Poprawiony warunek na n - k
         string oligonucleotide = DNA.substr(i, k);
@@ -31,7 +31,7 @@ vector<string> generateIdealSpectrum(int k, int n, string DNA) {
     return idealSpectrum;
 }
 
-vector<string> negativeErrorsHandler(const vector<string>& spectrum, int nError,string primer) {
+vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int nError, const string& primer) {
     int repeats = 0, difference = 0;
 
     // Tworzymy zbiór, który automatycznie usuwa duplikaty
@@ -48,7 +48,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, int nError,
     if (difference > 0) {
         for (int i = 0; i < difference; i++) {
             if (!uniqueVec.empty()) { // Sprawdzamy, czy uniqueVec nie jest pusty
-                while (1) {
+                while (true) {
                     int position = rand() % uniqueVec.size(); // Losowa pozycja
                     // Usuwanie elementu na podstawie losowej pozycji
                     if(uniqueVec[position] != primer) {
@@ -65,7 +65,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, int nError,
     return uniqueVec; // Zwracamy wektor unikalnych elementów
 }
 
-vector<string> positiveErrorGenerator(int pError, int k, vector<string> spectrum) {
+vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string> &spectrum) {
     //Była mowa ze maja byc przechowywane - to są
 vector<string> positiveErrors; // vektor pozytywnych błędów
 
@@ -73,8 +73,8 @@ vector<string> positiveErrors; // vektor pozytywnych błędów
         string positiveError;
         do {
             for (int j = 0; j < k; j++) {
-                const char nucleotides[] = {'A', 'C', 'T', 'G'};
-                char generatedNucleotide = nucleotides[rand() % 4];
+                const char nucleotides[4] = {'A', 'C', 'T', 'G'};
+                const char generatedNucleotide = nucleotides[rand() % 4];
                 positiveError += generatedNucleotide;
             }
         }while (contains(spectrum, positiveError) || contains(positiveErrors, positiveError));
@@ -85,10 +85,10 @@ vector<string> positiveErrors; // vektor pozytywnych błędów
     return positiveErrors;
 }
 
-vector<string> positiveErrorHandler( vector<string> spectrum, vector<string> positiveErrors) {
+vector<string> positiveErrorHandler(const vector<string> &spectrum, const vector<string>& positiveErrors) {
     vector<string> combinedVector = spectrum; // Wektor przechowujacy nasze spektrum z uwzlegdnieniem bledow pozytywnych (negatywne wstawiamy wczesniej i tez juz sa)
-    for (int i = 0; i < positiveErrors.size(); i++) {
-        combinedVector.push_back(positiveErrors[i]);
+    for (const auto & positiveError : positiveErrors) {
+        combinedVector.push_back(positiveError);
     }
     return combinedVector;
 }
