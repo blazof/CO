@@ -17,6 +17,28 @@ bool contains(const vector<T>& vec, const T& value) {
     return find(vec.begin(), vec.end(), value) != vec.end();
 }
 
+string readDNAFromFile(string& DNA, int &n, int &k, int &delta_k, int &nError, int &pError, int &probablePositive, bool &repAllowed) {
+    string filename = "DNA.txt";
+    ifstream inFile(filename.c_str());
+
+    if (inFile.is_open()) {
+        getline(inFile, DNA);
+        inFile >> n;
+        inFile >> k;
+        inFile >> delta_k;
+        inFile >> probablePositive;
+        inFile >> nError;
+        inFile >> pError;
+        inFile >> repAllowed;
+
+        inFile.close();
+        return DNA;
+    } else {
+        cerr << "Nie można otworzyć pliku do odczytu: " << filename << endl;
+        return "";
+    }
+}
+
 void saveToFile(const string DNA, const int n, const int k, const int delta_k, const int nError, const int pError, const int probablePositive,const bool repAllowed) {
     string filename = "DNA.txt";
     ofstream outFile(filename.c_str());
@@ -27,11 +49,6 @@ void saveToFile(const string DNA, const int n, const int k, const int delta_k, c
     }else {
         cerr << "Nie można otworzyć pliku do zapisu. " << filename << endl;
     }
-}
-
-string readDNAFromFile(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
-    string DNA = "";
-    return DNA;
 }
 
 string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
@@ -206,11 +223,10 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
                 switch (choice) {
                     case 1:
-                        DNA = readDNAFromFile(n = 400, k = 8, delta_k = 2, repAllowed = true, nError = 0, pError = 0, probablePositive = 0);
+                        DNA = readDNAFromFile(DNA,n, k, delta_k, nError, pError, probablePositive, repAllowed);
                         break;
                     case 2:
                         DNA = generateDNA(n = 400, k = 8, delta_k = 2, repAllowed = true, nError = 0, pError = 0, probablePositive = 0);
-                        cout << "2. Ręcznie" << endl;
                         break;
                     default:
                         cout << "Podałeś złą opcję menu, wybierz jeszcze raz." << endl;
