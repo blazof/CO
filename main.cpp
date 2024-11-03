@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include "levenstein.h"
 
 using namespace std;
 
@@ -210,11 +211,10 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
 int main() {
     srand(static_cast<unsigned>(time(0)));
-
     int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
     string input;
     bool repAllowed = true;
-    string DNA, primer;
+    string DNA, primer, DNADWA;
     vector<string> idealSpectrum, spectrum, positiveErrors;
 
     menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
@@ -223,6 +223,11 @@ int main() {
     primer = idealSpectrum[0];
 
     cout << "Wygenerowane DNA: " << DNA << endl;
+
+    /* DNADWA = generateDNA(n, k, delta_k, repAllowed, nError, pError, probablePositive);
+    cout<< "Drugie DNA:" << DNADWA<<endl;                                                     TUTAJ JEST TEST MIARY LEVENSTEINA - DZIALA!!!
+    cout<< "MIARA" << levenshteinDist(DNA, DNADWA)<<endl; */
+
     cout << "Pierwszy oligonukleotyd: " << primer << endl;
 
     for (const string& element : idealSpectrum) {
