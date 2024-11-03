@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+
 using namespace std;
 
 template <typename T>
@@ -13,12 +14,57 @@ bool contains(const vector<T>& vec, const T& value) {
     return find(vec.begin(), vec.end(), value) != vec.end();
 }
 
-string readDNAFromFile() {
+string readDNAFromFile(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     string DNA = "";
-
     return DNA;
 }
-string generateDNA(int n) {
+
+string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
+    string input;
+
+    // Wczytywanie długości łańcucha z domyślną wartością
+    cout << "Podaj długość łańcucha (domyślnie " << n << "): ";
+    getline(cin, input);
+    getline(cin, input);
+    if (!input.empty() && isdigit(input[0])) {
+        stringstream(input) >> n;
+    }
+
+    // Wczytywanie długości oligonukleotydów z domyślną wartością
+    cout << "Podaj długość oligonukleotydów (domyślnie " << k << "): ";
+    getline(cin, input);
+    if (!input.empty() && isdigit(input[0])) {
+        stringstream(input) >> k;
+    }
+
+    // Wczytywanie delta_k
+    cout << "Podaj możliwą zmiennosć długości oligonukleotydów (delta_k) (domyślnie " << delta_k << "): ";
+    getline(cin, input);
+    if (!input.empty() && isdigit(input[0])) {
+        stringstream(input) >> delta_k;
+    }
+
+    // Czy powtórzenia są dozwolone?
+    cout << "Czy powtórzenia są dozwolone? T/N (domyślnie T): ";
+    getline(cin, input);
+    if (!input.empty()) {
+        repAllowed = (input == "T");
+    }
+
+    // Wczytywanie liczby błędów negatywnych z domyślną wartością
+    cout << "Podaj ilość błędów negatywnych (domyślnie " << nError << "): ";
+    getline(cin, input);
+    if (!input.empty() && isdigit(input[0])) {
+        stringstream(input) >> nError;
+    }
+
+    // Wczytywanie liczby błędów pozytywnych z domyślną wartością
+    cout << "Podaj ilość błędów pozytywnych (domyślnie " << pError << "): ";
+    getline(cin, input);
+    if (!input.empty() && isdigit(input[0])) {
+        stringstream(input) >> pError;
+    }
+
     string DNA;
     for (int i = 0; i < n; i++) {
         const char nucleotides[] = {'A', 'C', 'T', 'G'};
@@ -28,10 +74,28 @@ string generateDNA(int n) {
     return DNA;
 }
 
-vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA) {
+vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA, const int delta_k) {
+    int shift =0;
     vector<string> idealSpectrum;
+    string oligonucleotide = "";
+
+
+
+
     for (int i = 0; i <= n - k; i++) {
-        string oligonucleotide = DNA.substr(i, k);
+
+        if(i > n-k -3) {
+            oligonucleotide = DNA.substr(i, k);
+        }else {
+            if (delta_k > 0) {
+                shift = rand() % (delta_k+1);
+                if (rand() % 2 == 0) {
+                    shift *= -1;
+                }
+            }
+             oligonucleotide = DNA.substr(i, k+shift);
+        }
+
         idealSpectrum.push_back(oligonucleotide);
     }
     return idealSpectrum;
@@ -70,22 +134,24 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     return uniqueVec;
 }
 
-vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string>& spectrum) {
+vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string>& spectrum, const int delta_k, const int probablePositive) {
     vector<string> positiveErrors;
 
     for (int i = 0; i < pError; i++) {
         string positiveError;
-        do {
-            for (int j = 0; j < k; j++) {
-                const char nucleotides[4] = {'A', 'C', 'T', 'G'};
-                const char generatedNucleotide = nucleotides[rand() % 4];
-                positiveError += generatedNucleotide;
-            }
-        } while (contains(spectrum, positiveError) || contains(positiveErrors, positiveError));
 
-        positiveErrors.push_back(positiveError);
+            do {
+                positiveError = "";
+                for (int j = 0; j < k ; j++) {
+                    const char nucleotides[4] = {'A', 'C', 'T', 'G'};
+                    const char generatedNucleotide = nucleotides[rand() % 4];
+                    positiveError += generatedNucleotide;
+                }
+            } while (contains(spectrum, positiveError) || contains(positiveErrors, positiveError));
+
+            positiveErrors.push_back(positiveError);
+
     }
-
     return positiveErrors;
 }
 
@@ -97,17 +163,19 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     return combinedVector;
 }
 
-void menu(string &DNA) {
-    int choice = 0;
+void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
-    cout << "     Menu główne" << endl;
-    cout << "1. Generator instancji" << endl;
-    cout << "2. Algorytm naiwny" << endl;
-    cout << "3. Metaheurystyka" << endl;
-    cin >> choice;
 
     do {
+        int choice = 0;
         repeat = false;
+
+        cout << "     Menu główne" << endl;
+        cout << "1. Generator instancji" << endl;
+        cout << "2. Algorytm naiwny" << endl;
+        cout << "3. Metaheurystyka" << endl;
+        cin >> choice;
+
         switch (choice) {
             case 1:
                 cout << "1. Wczytaj DNA z pliku" << endl;
@@ -116,17 +184,17 @@ void menu(string &DNA) {
 
                 switch (choice) {
                     case 1:
-                       DNA= readDNAFromFile();
+                        DNA = readDNAFromFile(n, k, delta_k, repAllowed, nError, pError, probablePositive);
                         break;
                     case 2:
+                        DNA = generateDNA(n, k, delta_k, repAllowed, nError, pError, probablePositive);
                         cout << "2. Ręcznie" << endl;
                         break;
                     default:
-                        cout << "Podałeś złą opcję menu" << endl;
+                        cout << "Podałeś złą opcję menu, wybierz jeszcze raz." << endl;
                         repeat = true;
                 }
                 break;
-
             case 2:
                 cout << "Naiwny in progress" << endl;
                 break;
@@ -134,63 +202,24 @@ void menu(string &DNA) {
                 cout << "Metaheurystyka in progress" << endl;
                 break;
             default:
-                cout << "Żadna z opcji nie jest prawidłowa" << endl;
+                cout << "Żadna z opcji nie jest prawidłowa. Wybierz jeszcze raz." << endl;
                 repeat = true;
         }
     } while (repeat);
 }
 
-
 int main() {
     srand(static_cast<unsigned>(time(0)));
 
-    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0;
+    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
     string input;
     bool repAllowed = true;
     string DNA, primer;
     vector<string> idealSpectrum, spectrum, positiveErrors;
 
-    // Wczytywanie długości łańcucha z domyślną wartością
-    cout << "Podaj długość łańcucha (domyślnie " << n << "): ";
-    getline(cin, input);
-    if (!input.empty()) {
-        stringstream(input) >> n;
-    }
+    menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
 
-    // Wczytywanie długości oligonukleotydów z domyślną wartością
-    cout << "Podaj długość oligonukleotydów (domyślnie " << k << "): ";
-    getline(cin, input);
-    if (!input.empty()) {
-        stringstream(input) >> k;
-    }
-
-    // Czy powtórzenia są dozwolone?
-    cout << "Czy powtórzenia są dozwolone? T/N (domyślnie T): ";
-    getline(cin, input);
-    if (!input.empty()) {
-        if (input == "T") {
-            repAllowed = true;
-        } else if (input == "N") {
-            repAllowed = false;
-        }
-    }
-
-    // Wczytywanie liczby błędów negatywnych z domyślną wartością
-    cout << "Podaj ilość błędów negatywnych (domyślnie " << nError << "): ";
-    getline(cin, input);
-    if (!input.empty()) {
-        stringstream(input) >> nError;
-    }
-
-    // Wczytywanie liczby błędów pozytywnych z domyślną wartością
-    cout << "Podaj ilość błędów pozytywnych (domyślnie " << pError << "): ";
-    getline(cin, input);
-    if (!input.empty()) {
-        stringstream(input) >> pError;
-    }
-
-    DNA = generateDNA(n);
-    idealSpectrum = generateIdealSpectrum(k, n, DNA);
+    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k);
     primer = idealSpectrum[0];
 
     cout << "Wygenerowane DNA: " << DNA << endl;
@@ -203,7 +232,7 @@ int main() {
 
     cout << "UWAGA SPEKTRUM!" << endl;
     spectrum = negativeErrorsHandler(idealSpectrum, nError, primer);
-    positiveErrors = positiveErrorGenerator(pError, k, spectrum);
+    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
 
     for (const string& element : spectrum) {
         cout << element << " ";
@@ -218,7 +247,7 @@ int main() {
 
     spectrum = positiveErrorHandler(spectrum, positiveErrors);
 
-    cout << "UWAGA SPEKTRUM Z POZYTYWNYMI BLEDAMI!" << endl;
+    cout << "UWAGA SPEKTRUM Z POZYTYWNYMI BŁĘDAMI!" << endl;
     for (const string& element : spectrum) {
         cout << element << " ";
     }
