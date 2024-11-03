@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
+
 #include "levenstein.h"
 
 using namespace std;
@@ -13,6 +15,18 @@ using namespace std;
 template <typename T>
 bool contains(const vector<T>& vec, const T& value) {
     return find(vec.begin(), vec.end(), value) != vec.end();
+}
+
+void saveToFile(const string DNA, const int n, const int k, const int delta_k, const int nError, const int pError, const int probablePositive,const bool repAllowed) {
+    string filename = "DNA.txt";
+    ofstream outFile(filename.c_str());
+    if(outFile.is_open()) {
+        cout<<"PLIK OPEN"<<endl;
+        outFile << DNA<< "\n"<< n << "\n" << k << "\n" << delta_k << "\n" << probablePositive << "\n"<<nError << "\n" << pError<< "\n" << repAllowed<<"\n";
+        outFile.close();
+    }else {
+        cerr << "Nie można otworzyć pliku do zapisu. " << filename << endl;
+    }
 }
 
 string readDNAFromFile(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
@@ -49,7 +63,11 @@ string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, 
     cout << "Czy powtórzenia są dozwolone? T/N (domyślnie T): ";
     getline(cin, input);
     if (!input.empty()) {
-        repAllowed = (input == "T");
+       if (input == "N") {
+           repAllowed = false;
+       }else {
+           repAllowed = true;
+       }
     }
 
     // Wczytywanie liczby błędów negatywnych z domyślną wartością
@@ -66,37 +84,44 @@ string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, 
         stringstream(input) >> pError;
     }
 
+    cout << "Czy błędy pozytywne mają być realistyczne? T/N (domyślnie T): ";
+    getline(cin, input);
+    if (!input.empty()) {
+        if (input == "T") {
+            probablePositive =1;
+        }else {
+            probablePositive =0;
+        }
+    }
+
     string DNA;
     for (int i = 0; i < n; i++) {
         const char nucleotides[] = {'A', 'C', 'T', 'G'};
         char generatedNucleotide = nucleotides[rand() % 4];
         DNA += generatedNucleotide;
     }
+    //zapis do pliku
+    saveToFile(DNA,n,k,delta_k,nError,pError,probablePositive, repAllowed);
     return DNA;
 }
 
 vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA, const int delta_k) {
-    int shift =0;
+    int shift = 0;
     vector<string> idealSpectrum;
     string oligonucleotide = "";
 
-
-
-
     for (int i = 0; i <= n - k; i++) {
-
-        if(i > n-k -3) {
+        if (i > n - k - 3) {
             oligonucleotide = DNA.substr(i, k);
-        }else {
+        } else {
             if (delta_k > 0) {
-                shift = rand() % (delta_k+1);
+                shift = rand() % (delta_k + 1);
                 if (rand() % 2 == 0) {
                     shift *= -1;
                 }
             }
-             oligonucleotide = DNA.substr(i, k+shift);
+            oligonucleotide = DNA.substr(i, k + shift);
         }
-
         idealSpectrum.push_back(oligonucleotide);
     }
     return idealSpectrum;
@@ -113,7 +138,6 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     vector<string> uniqueVec(uniqueSet.begin(), uniqueSet.end());
 
     difference = nError - repeats;
-
     cout << "Powtórzenia: " << repeats << endl;
 
     if (difference > 0) {
@@ -140,18 +164,15 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
 
     for (int i = 0; i < pError; i++) {
         string positiveError;
-
-            do {
-                positiveError = "";
-                for (int j = 0; j < k ; j++) {
-                    const char nucleotides[4] = {'A', 'C', 'T', 'G'};
-                    const char generatedNucleotide = nucleotides[rand() % 4];
-                    positiveError += generatedNucleotide;
-                }
-            } while (contains(spectrum, positiveError) || contains(positiveErrors, positiveError));
-
-            positiveErrors.push_back(positiveError);
-
+        do {
+            positiveError = "";
+            for (int j = 0; j < k; j++) {
+                const char nucleotides[4] = {'A', 'C', 'T', 'G'};
+                const char generatedNucleotide = nucleotides[rand() % 4];
+                positiveError += generatedNucleotide;
+            }
+        } while (contains(spectrum, positiveError) || contains(positiveErrors, positiveError));
+        positiveErrors.push_back(positiveError);
     }
     return positiveErrors;
 }
@@ -185,10 +206,10 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
                 switch (choice) {
                     case 1:
-                        DNA = readDNAFromFile(n, k, delta_k, repAllowed, nError, pError, probablePositive);
+                        DNA = readDNAFromFile(n = 400, k = 8, delta_k = 2, repAllowed = true, nError = 0, pError = 0, probablePositive = 0);
                         break;
                     case 2:
-                        DNA = generateDNA(n, k, delta_k, repAllowed, nError, pError, probablePositive);
+                        DNA = generateDNA(n = 400, k = 8, delta_k = 2, repAllowed = true, nError = 0, pError = 0, probablePositive = 0);
                         cout << "2. Ręcznie" << endl;
                         break;
                     default:
@@ -224,9 +245,9 @@ int main() {
 
     cout << "Wygenerowane DNA: " << DNA << endl;
 
-    /* DNADWA = generateDNA(n, k, delta_k, repAllowed, nError, pError, probablePositive);
-    cout<< "Drugie DNA:" << DNADWA<<endl;                                                     TUTAJ JEST TEST MIARY LEVENSTEINA - DZIALA!!!
-    cout<< "MIARA" << levenshteinDist(DNA, DNADWA)<<endl; */
+    /* DNADWA = generateDNA(n=400, k=8, delta_k=2, repAllowed=true, nError=0, pError=0, probablePositive=0);
+    cout<< "Drugie DNA:" << DNADWA << endl;                                                   // TUTAJ JEST TEST MIARY LEVENSTEINA - DZIALA!!!
+    cout << "MIARA" << levenshteinDist(DNA, DNADWA) << endl; */
 
     cout << "Pierwszy oligonukleotyd: " << primer << endl;
 
