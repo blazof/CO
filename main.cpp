@@ -182,8 +182,15 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
     for (int i = 0; i < pError; i++) {
         string positiveError;
         do {
+            int shift=0;
+            if (delta_k > 0) {
+                shift = rand() % (delta_k + 1);
+                if (rand() % 2 == 0) {
+                    shift *= -1;
+                }
+            }
             positiveError = "";
-            for (int j = 0; j < k; j++) {
+            for (int j = 0; j < k+shift; j++) {
                 const char nucleotides[4] = {'A', 'C', 'T', 'G'};
                 const char generatedNucleotide = nucleotides[rand() % 4];
                 positiveError += generatedNucleotide;
