@@ -144,6 +144,8 @@ vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA
     return idealSpectrum;
 }
 
+
+
 vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int nError, const string& primer) {
     int repeats = 0, difference = 0;
 
@@ -255,6 +257,8 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
 int main() {
     srand(static_cast<unsigned>(time(0)));
+
+
     int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
     string input;
     bool repAllowed = true;
@@ -308,6 +312,53 @@ int main() {
     for (const string& element : spectrum) {
         cout << element << " ";
     }
+    //GRAF MOMENT
+    vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(),0));
 
+    for (int i = 0; i < spectrum.size(); i++) {
+        for (int j = 0; j < spectrum.size(); j++) {
+            if(i==j) {
+                continue;
+            }
+            int size=0;
+            if(spectrum[i].size() > spectrum[j].size()) {
+                size = spectrum[j].size();
+            }else {
+                size = spectrum[i].size();
+            }
+            //jedynki
+            string tmp1 = spectrum[i].substr(spectrum[i].size()-size+1,size-1 );
+            string tmp2 = spectrum[j].substr(0, size-1);
+
+            if (tmp1 == tmp2) {
+                graph[i][j] = 1;
+                cout<<tmp1<<" == "<<tmp2<<endl;
+            } else if(nError> 0) {
+
+                tmp1 = tmp1.substr(1,tmp1.size());
+                tmp2 = tmp2.substr(0,tmp2.size()-1);
+                if (tmp1 == tmp2) {
+                    graph[i][j] = 2;
+                    cout<<tmp1<<" == "<<tmp2<<endl;
+                }else {
+                    tmp1 = tmp1.substr(1,tmp1.size());
+                    tmp2 = tmp2.substr(0,tmp2.size()-1);
+                    if (tmp1 == tmp2) {
+                        graph[i][j] = 3;
+                    }
+                }
+
+            }
+
+
+
+        }
+    }
+    for (int i = 0; i < spectrum.size(); i++) {
+        for (int j = 0; j < spectrum.size(); j++) {
+            cout<<graph[i][j]<<" ";
+        }cout<<endl;
+
+    }
     return 0;
 }
