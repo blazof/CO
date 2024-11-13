@@ -7,6 +7,7 @@
 #include <sstream>
 #include <algorithm>
 #include <fstream>
+#include <stdarg.h>
 
 #include "levenstein.h"
 
@@ -178,6 +179,48 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     return uniqueVec;
 }
 
+vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVisited, vector<string> spectrum) {
+    vector<int> vertices;       // Lista wierzchołków do odwiedzenia
+    vector<int> toVisit = notVisited;  // Kopia listy wierzchołków, które jeszcze nie zostały odwiedzone
+    int index = 0;
+
+    // Chcemy odwiedzić 3 wierzchołki
+    for (int i = 0; i < 3; i++) {
+        bool found = false;  // Flaga wskazująca, czy znaleziono wierzchołek do odwiedzenia
+        index = rand() % toVisit.size();  // Losujemy losowy indeks wierzchołka
+
+        for (int j = 0; j < spectrum.size(); j++) {
+            // Sprawdzamy sąsiadów wylosowanego wierzchołka
+            if (graph[index][j] != 0 && contains(toVisit, j)) {  // Sprawdzamy, czy sąsiad jest nieodwiedzony
+                vertices.push_back(index);  // Dodajemy do listy odwiedzonych
+                // Usuwamy wierzchołek z toVisit, używając podejścia z indeksem
+                for (int x = 0; x < toVisit.size(); x++) {
+                    if (toVisit[x] == index) {
+                        toVisit.erase(toVisit.begin() + x);  // Usuwamy element za pomocą indeksu
+                        break;  // Przerywamy po usunięciu
+                    }
+                }
+                found = true;
+                break;  // Przerywamy pętlę, gdy znajdziemy sąsiada, którego jeszcze nie odwiedziliśmy
+            }
+        }
+
+        if (!found) {
+            i--;  // Jeśli nie znaleziono wierzchołka do odwiedzenia, powtarzamy iterację
+        }
+    }
+
+    // Debug: Wypisanie wierzchołków do odwiedzenia
+    cout << "Elementy do odwiedzenia: ";
+    for (int element : vertices) {
+        cout << element << " ";
+    }
+    cout << endl;
+
+    return vertices;
+}
+
+
 vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string>& spectrum, const int delta_k, const int probablePositive) {
     vector<string> positiveErrors;
 
@@ -333,14 +376,14 @@ int main() {
             if (tmp1 == tmp2) {
                 graph[i][j] = 1;
                 cout<<tmp1<<" == "<<tmp2<<endl;
-            } else if(nError> 0) {
+            } else if(nError> 0 && k-delta_k>2) {
 
                 tmp1 = tmp1.substr(1,tmp1.size());
                 tmp2 = tmp2.substr(0,tmp2.size()-1);
                 if (tmp1 == tmp2) {
                     graph[i][j] = 2;
                     cout<<tmp1<<" == "<<tmp2<<endl;
-                }else {
+                }else if(k-delta_k>3) {
                     tmp1 = tmp1.substr(1,tmp1.size());
                     tmp2 = tmp2.substr(0,tmp2.size()-1);
                     if (tmp1 == tmp2) {
@@ -354,11 +397,59 @@ int main() {
 
         }
     }
+
+
     for (int i = 0; i < spectrum.size(); i++) {
         for (int j = 0; j < spectrum.size(); j++) {
             cout<<graph[i][j]<<" ";
         }cout<<endl;
 
     }
+    int index=0;
+    string output="";
+    vector<int> notVisited;
+    for(int i =0; i<spectrum.size(); i++) {
+        notVisited.push_back(i);
+    }
+    //wstawiamy primer i identyfikujamy index
+    for(int i=0; i<spectrum.size(); i++) {
+        if(spectrum[i] == primer) {
+            index = i;
+            output+=spectrum[i];
+            notVisited.erase(notVisited.begin()+i);
+            break;
+        }
+    }
+
+for(int i=0; i<spectrum.size(); i++) {
+    if(graph[index][i] == 1 && contains(notVisited,i)) {
+        int nextVertexIndex = i;
+        string oligo = spectrum[i];
+        int shorter=0;
+        if(spectrum[i].size() > spectrum[nextVertexIndex].size()) {
+            shorter = spectrum[nextVertexIndex].size();
+        }else {
+            shorter = spectrum[i].size();
+        }
+
+
+        oligo = oligo.substr(shorter-1, oligo.size());
+        output+=oligo;
+        index=i;
+
+        for(auto element : notVisited) {
+            if(element==index) {
+                notVisited.erase(notVisited.begin()+index);
+
+            }
+        }
+
+    }
+}
+    verticesToVisit(graph,notVisited,spectrum);
+
+    cout<<output<<endl;
+
+
     return 0;
 }
