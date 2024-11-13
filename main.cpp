@@ -123,7 +123,7 @@ string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, 
     return DNA;
 }
 
-vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA, const int delta_k) {
+vector<string> generateIdealSpectrum(const int k, const int n, string& DNA, const int delta_k, bool repAllowed) {
     int shift = 0;
     vector<string> idealSpectrum;
     string oligonucleotide = "";
@@ -138,16 +138,36 @@ vector<string> generateIdealSpectrum(const int k, const int n, const string& DNA
                     shift *= -1;
                 }
             }
+
             oligonucleotide = DNA.substr(i, k + shift);
+
+
+        }
+
+        if(!repAllowed) {
+            if(contains(idealSpectrum, oligonucleotide)) {
+                cout<<"POWTÓRZENIE"<<endl;
+                do {
+                    const char nucleotides[] = {'A', 'C', 'T', 'G'};
+                    char generatedNucleotide = nucleotides[rand() % 4];
+                    int randomIndex = rand() % oligonucleotide.length();
+                    cout << "OLIGO PRZED ZMIANA: " << oligonucleotide <<endl;
+                    oligonucleotide[randomIndex] = generatedNucleotide;
+                    cout<<DNA<<endl;
+                    cout << "TU BYŁO POWTÓRZENIE: " << oligonucleotide << " DNA: " << DNA[i+randomIndex]<< endl;
+
+                    DNA[i+randomIndex] = generatedNucleotide;
+                    cout<<DNA<<endl;
+                }while (contains(idealSpectrum,oligonucleotide));
+
+            }
         }
         idealSpectrum.push_back(oligonucleotide);
     }
     return idealSpectrum;
 }
 
-
-
-vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int nError, const string& primer) {
+vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int nError, const string& primer, int &n, int &k, int &delta_k, bool &repAllowed, int &pError, int &probablePositive) {
     int repeats = 0, difference = 0;
 
     // Tworzymy zbiór, który automatycznie usuwa duplikaty
@@ -158,8 +178,22 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     vector<string> uniqueVec(uniqueSet.begin(), uniqueSet.end());
 
     difference = nError - repeats;
-    cout << "Powtórzenia: " << repeats << endl;
+    cout<<"Powtórzenia: "<< repeats <<endl;
+    /*
+    cout << "Powtórzenia: " << repeats << "Czy chcesz kontynować (w przeciwnym razie instancja będzie generowana na nowo. T/N (domyślnie T)" << endl;
 
+    string input;
+    getline(cin, input);
+
+    if (!input.empty()) {
+        if (input == "N") {
+            // generujemy na nowo
+
+        }
+    }else {
+
+    }
+    */
     if (difference > 0) {
         for (int i = 0; i < difference; i++) {
             if (!uniqueVec.empty()) {
@@ -310,7 +344,7 @@ int main() {
 
     menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
 
-    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k);
+    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
     primer = idealSpectrum[0];
 
     cout << "Wygenerowane DNA: " << DNA << endl;
@@ -327,7 +361,7 @@ int main() {
     cout << endl;
 
     cout << "UWAGA SPEKTRUM!" << endl;
-    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer);
+    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n ,k, delta_k, repAllowed,pError, probablePositive);
     positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
 
     for (const string& element : spectrum) {
@@ -355,6 +389,10 @@ int main() {
     for (const string& element : spectrum) {
         cout << element << " ";
     }
+
+
+
+
     //GRAF MOMENT
     vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(),0));
 
