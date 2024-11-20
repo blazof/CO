@@ -6,8 +6,10 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <climits>
 #include <fstream>
 #include <stdarg.h>
+#include <strings.h>
 
 #include "levenstein.h"
 
@@ -194,7 +196,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
 
     }
     */
-    if (difference > 0) {
+
         for (int i = 0; i < difference; i++) {
             if (!uniqueVec.empty()) {
                 while (true) {
@@ -206,20 +208,18 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
                 }
             }
         }
-    } else if (difference < 0) {
-        cout << "Nie obsługujemy tego jeszcze :3" << endl;
-    }
+
 
     return uniqueVec;
 }
 
-vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVisited, vector<string> spectrum) {
+vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVisited, vector<string> spectrum, int &finalIndex) {
     vector<int> vertices;       // Lista wierzchołków do odwiedzenia
     vector<int> toVisit = notVisited;  // Kopia listy wierzchołków, które jeszcze nie zostały odwiedzone
     int index = 0;
 
     // Chcemy odwiedzić 3 wierzchołki
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 10; i++) {
         bool found = false;  // Flaga wskazująca, czy znaleziono wierzchołek do odwiedzenia
         index = rand() % toVisit.size();  // Losujemy losowy indeks wierzchołka
 
@@ -287,7 +287,44 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
+void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output) {
+    bool progress = true; // Ensure progress to avoid infinite loops
+    while (progress && !notVisited.empty()) {
+        progress = false;
+        vector<int> pickOnePath;
 
+        // Iterate through the graph's adjacency matrix for the current index
+        for (int i = 0; i < spectrum.size(); i++) {
+
+            if (graph[index][i] == 1 && contains(notVisited, i)) {
+                pickOnePath.push_back(i);
+            }
+
+
+            if(i==spectrum.size()-1 && !pickOnePath.empty()) {
+                int randomPath = rand() % pickOnePath.size();
+                string oligo = spectrum[pickOnePath[randomPath]];
+                int shorter = min(spectrum[index].size(), spectrum[pickOnePath[randomPath]].size());
+
+                // Append overlapping part to the output
+                oligo = oligo.substr(shorter - 1, oligo.size());
+                output += oligo;
+
+                // Update `index` and mark vertex as visited
+                index = pickOnePath[randomPath];
+                notVisited.erase(find(notVisited.begin(), notVisited.end(), pickOnePath[randomPath]));
+
+
+                progress = true; // Continue to the next vertex
+
+                pickOnePath.clear();
+                break; // Exit the inner loop to process the next vertex
+
+            }
+        }
+
+    }
+}
 void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
 
@@ -330,6 +367,36 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
                 repeat = true;
         }
     } while (repeat);
+}
+int minDistance(int dist[], bool sptSet[], int V) {
+    int min = INT_MAX, min_index;
+    for (int v = 0; v < V; v++) {
+        if (sptSet[v] == false && dist[v] <= min) {
+            min = dist[v], min_index = v;
+        }
+    }
+    return min_index;
+}
+
+void dijkstra(const vector<vector<int>> &graph, int src, int V, vector<int> &dist) {
+    bool sptSet[V];  // Tablica sprawdzająca, które wierzchołki zostały odwiedzone
+    fill(dist.begin(), dist.end(), INT_MAX);  // Inicjalizujemy odległości jako nieskończoność
+    fill(sptSet, sptSet + V, false);  // Wszystkie wierzchołki są na początku nieodwiedzone
+
+    dist[src] = 0;  // Odległość do samego siebie wynosi 0
+
+    // Pętla Dijkstry
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist.data(), sptSet, V);  // Wybieramy wierzchołek o najmniejszej odległości
+        sptSet[u] = true;  // Oznaczamy go jako odwiedzony
+
+        // Aktualizujemy odległości sąsiadów
+        for (int v = 0; v < V; v++) {
+            if (!sptSet[v] && graph[u][v] != 0 && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {
+                dist[v] = dist[u] + graph[u][v];
+            }
+        }
+    }
 }
 
 int main() {
@@ -443,51 +510,58 @@ int main() {
         }cout<<endl;
 
     }
-    int index=0;
-    string output="";
+    int index = 0;
+    string output = "";
     vector<int> notVisited;
-    for(int i =0; i<spectrum.size(); i++) {
+
+    // Initialize `notVisited` with all indices
+    for (int i = 0; i < spectrum.size(); i++) {
         notVisited.push_back(i);
     }
-    //wstawiamy primer i identyfikujamy index
-    for(int i=0; i<spectrum.size(); i++) {
-        if(spectrum[i] == primer) {
+
+    // Find the primer in the spectrum and set as the starting point
+    for (int i = 0; i < spectrum.size(); i++) {
+        if (spectrum[i] == primer) {
             index = i;
-            output+=spectrum[i];
-            notVisited.erase(notVisited.begin()+i);
+            output += spectrum[i];
+            notVisited.erase(find(notVisited.begin(), notVisited.end(), i)); // Safe removal
             break;
         }
     }
 
-for(int i=0; i<spectrum.size(); i++) {
-    if(graph[index][i] == 1 && contains(notVisited,i)) {
-        int nextVertexIndex = i;
-        string oligo = spectrum[i];
-        int shorter=0;
-        if(spectrum[i].size() > spectrum[nextVertexIndex].size()) {
-            shorter = spectrum[nextVertexIndex].size();
-        }else {
-            shorter = spectrum[i].size();
-        }
 
+//    AATATGTCTGCC
 
-        oligo = oligo.substr(shorter-1, oligo.size());
-        output+=oligo;
-        index=i;
+  /*  cout << "Reconstructed sequence: " << output << endl;
+    int toVisitPercent = 0.2;
+    vector<int> dist(spectrum.size(), INT_MAX);
+    pathByOne(notVisited,spectrum,graph,index,output);
+    cout<<"SIZE"<<endl;
+    cout<< notVisited.size() << " " <<spectrum.size()<<endl;
+    float condition = static_cast<float>(notVisited.size()) / spectrum.size();
+    cout << "condition = " << condition << endl;
+    if(condition >  toVisitPercent) {
+     cout<<"CHUJ"<<endl;
+       vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
 
-        for(auto element : notVisited) {
-            if(element==index) {
-                notVisited.erase(notVisited.begin()+index);
+        for (int vertex : toVisit) {
 
+            cout << "Obliczam odległość od wierzchołka: " << index << endl;
+            dijkstra(graph, index, spectrum.size(), dist);
+            // Drukujemy wyniki dla każdego wierzchołka
+            for (int i = 0; i < 10; i++) {
+                cout << "Do wierzchołka " << i << " odległość wynosi: " << dist[i] << endl;
             }
         }
-
     }
-}
-    verticesToVisit(graph,notVisited,spectrum);
+*/
+    pathByOne(notVisited,spectrum,graph,index,output);
+    cout<<index<<endl;
+    vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
 
     cout<<output<<endl;
 
 
     return 0;
 }
+//CTTGCGCAGGGCGACGGCGC
