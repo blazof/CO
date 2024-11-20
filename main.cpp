@@ -312,7 +312,9 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 
                 // Update `index` and mark vertex as visited
                 index = pickOnePath[randomPath];
-                notVisited.erase(find(notVisited.begin(), notVisited.end(), pickOnePath[randomPath]));
+                //notVisited.erase(find(notVisited.begin(), notVisited.end(), pickOnePath[randomPath]));
+                notVisited.erase(find(notVisited.begin(), notVisited.end(), index));
+//  tutaj zmiana bo musimy ten index usunac
 
 
                 progress = true; // Continue to the next vertex
@@ -327,7 +329,6 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 }
 void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
-
     do {
         int choice = 0;
         repeat = false;
@@ -402,7 +403,6 @@ void dijkstra(const vector<vector<int>> &graph, int src, int V, vector<int> &dis
 int main() {
     srand(static_cast<unsigned>(time(0)));
 
-
     int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
     string input;
     bool repAllowed = true;
@@ -422,22 +422,23 @@ int main() {
 
     cout << "Pierwszy oligonukleotyd: " << primer << endl;
 
-    for (const string& element : idealSpectrum) {
+    for (const string &element: idealSpectrum) {
         cout << element << " ";
     }
     cout << endl;
 
     cout << "UWAGA SPEKTRUM!" << endl;
-    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n ,k, delta_k, repAllowed,pError, probablePositive);
+    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError,
+                                     probablePositive);
     positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
 
-    for (const string& element : spectrum) {
+    for (const string &element: spectrum) {
         cout << element << " ";
     }
     cout << endl;
 
     cout << "Tylko pozytywne errory" << endl;
-    for (const string& element : positiveErrors) {
+    for (const string &element: positiveErrors) {
         cout << element << " ";
     }
     cout << endl;
@@ -445,7 +446,7 @@ int main() {
     spectrum = positiveErrorHandler(spectrum, positiveErrors);
 
     cout << "UWAGA SPEKTRUM Z POZYTYWNYMI BŁĘDAMI!" << endl;
-    for (const string& element : spectrum) {
+    for (const string &element: spectrum) {
         cout << element << " ";
     }
     cout << endl;
@@ -453,44 +454,43 @@ int main() {
     sort(spectrum.begin(), spectrum.end());
 
     cout << "Posortowane spektrum ze wszystkimi błędami" << endl;
-    for (const string& element : spectrum) {
+    for (const string &element: spectrum) {
         cout << element << " ";
     }
 
 
 
-
     //GRAF MOMENT
-    vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(),0));
+    vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(), 0));
 
     for (int i = 0; i < spectrum.size(); i++) {
         for (int j = 0; j < spectrum.size(); j++) {
-            if(i==j) {
+            if (i == j) {
                 continue;
             }
-            int size=0;
-            if(spectrum[i].size() > spectrum[j].size()) {
+            int size = 0;
+            if (spectrum[i].size() > spectrum[j].size()) {
                 size = spectrum[j].size();
-            }else {
+            } else {
                 size = spectrum[i].size();
             }
             //jedynki
-            string tmp1 = spectrum[i].substr(spectrum[i].size()-size+1,size-1 );
-            string tmp2 = spectrum[j].substr(0, size-1);
+            string tmp1 = spectrum[i].substr(spectrum[i].size() - size + 1, size - 1);
+            string tmp2 = spectrum[j].substr(0, size - 1);
 
             if (tmp1 == tmp2) {
                 graph[i][j] = 1;
-                cout<<tmp1<<" == "<<tmp2<<endl;
-            } else if(nError> 0 && k-delta_k>2) {
+                cout << tmp1 << " == " << tmp2 << endl;
+            } else if (nError > 0 && k - delta_k > 2) {
 
-                tmp1 = tmp1.substr(1,tmp1.size());
-                tmp2 = tmp2.substr(0,tmp2.size()-1);
+                tmp1 = tmp1.substr(1, tmp1.size());
+                tmp2 = tmp2.substr(0, tmp2.size() - 1);
                 if (tmp1 == tmp2) {
                     graph[i][j] = 2;
-                    cout<<tmp1<<" == "<<tmp2<<endl;
-                }else if(k-delta_k>3) {
-                    tmp1 = tmp1.substr(1,tmp1.size());
-                    tmp2 = tmp2.substr(0,tmp2.size()-1);
+                    cout << tmp1 << " == " << tmp2 << endl;
+                } else if (k - delta_k > 3) {
+                    tmp1 = tmp1.substr(1, tmp1.size());
+                    tmp2 = tmp2.substr(0, tmp2.size() - 1);
                     if (tmp1 == tmp2) {
                         graph[i][j] = 3;
                     }
@@ -499,15 +499,15 @@ int main() {
             }
 
 
-
         }
     }
 
 
     for (int i = 0; i < spectrum.size(); i++) {
         for (int j = 0; j < spectrum.size(); j++) {
-            cout<<graph[i][j]<<" ";
-        }cout<<endl;
+            cout << graph[i][j] << " ";
+        }
+        cout << endl;
 
     }
     int index = 0;
@@ -530,38 +530,61 @@ int main() {
     }
 
 
-//    AATATGTCTGCC
+//    TRZEBA NAPRAWIC TO ZE LOSUJE NAM INDEX NA KTORYM SIE ZATRZYMALISMY I DO NIEGO PRZECHODZI!!!!!!!
 
-  /*  cout << "Reconstructed sequence: " << output << endl;
+    cout << "Reconstructed sequence: " << output << endl;
     int toVisitPercent = 0.2;
     vector<int> dist(spectrum.size(), INT_MAX);
-    pathByOne(notVisited,spectrum,graph,index,output);
-    cout<<"SIZE"<<endl;
-    cout<< notVisited.size() << " " <<spectrum.size()<<endl;
+    pathByOne(notVisited, spectrum, graph, index, output);
+
+    cout << "SIZE" << endl;
+    cout << notVisited.size() << " " << spectrum.size() << endl;
+
     float condition = static_cast<float>(notVisited.size()) / spectrum.size();
     cout << "condition = " << condition << endl;
-    if(condition >  toVisitPercent) {
-     cout<<"CHUJ"<<endl;
-       vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
+
+    if (condition > toVisitPercent) {
+        cout << "CHUJ" << endl;
+        vector<int> toVisit = verticesToVisit(graph, notVisited, spectrum, index);
+
+        // Uruchamiamy Dijkstrę raz, obliczamy ścieżki z `index`
+        cout << "Obliczam odległości od wierzchołka: " << index << endl;
+        dijkstra(graph, index, spectrum.size(), dist);
+
+        // Wyświetlamy odległości tylko do wierzchołków w `toVisit`
+        cout << "Odległości do wierzchołków wylosowanych z toVisit:" << endl;
+        int minDist = INT_MAX;
+        int nextVertex = -1;
 
         for (int vertex : toVisit) {
+            if (dist[vertex] == INT_MAX) {
+                cout << "Do wierzchołka " << vertex << ": brak połączenia (INT_MAX)" << endl;
+            } else {
+                cout << "Do wierzchołka " << vertex << ": " << dist[vertex] << endl;
 
-            cout << "Obliczam odległość od wierzchołka: " << index << endl;
-            dijkstra(graph, index, spectrum.size(), dist);
-            // Drukujemy wyniki dla każdego wierzchołka
-            for (int i = 0; i < 10; i++) {
-                cout << "Do wierzchołka " << i << " odległość wynosi: " << dist[i] << endl;
+                // Szukamy najbliższego wierzchołka
+                if (dist[vertex] < minDist) {
+                    minDist = dist[vertex];
+                    nextVertex = vertex;
+                }
             }
         }
+
+        // Wybieramy wierzchołek o najmniejszej odległości
+        if (nextVertex != -1) {
+            cout << "Najbliższy wierzchołek do odwiedzenia to: " << nextVertex
+                 << " z odległością: " << minDist << endl;
+        } else {
+            cout << "Nie znaleziono żadnego odpowiedniego wierzchołka do odwiedzenia!" << endl;
+        }
     }
-*/
-    pathByOne(notVisited,spectrum,graph,index,output);
-    cout<<index<<endl;
-    vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
-
-    cout<<output<<endl;
 
 
+    // pathByOne(notVisited,spectrum,graph,index,output);
+        //cout<<index<<endl;
+        //vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
+
+        cout << "Reconstructed sequence: " << output << endl;
     return 0;
-}
-//CTTGCGCAGGGCGACGGCGC
+    }
+
