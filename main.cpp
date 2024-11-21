@@ -532,11 +532,11 @@ int main() {
 
 //    TRZEBA NAPRAWIC TO ZE LOSUJE NAM INDEX NA KTORYM SIE ZATRZYMALISMY I DO NIEGO PRZECHODZI!!!!!!!
 
-    cout << "Reconstructed sequence: " << output << endl;
+
     int toVisitPercent = 0.2;
     vector<int> dist(spectrum.size(), INT_MAX);
     pathByOne(notVisited, spectrum, graph, index, output);
-
+    cout << "Reconstructed sequence: " << output << endl;
     cout << "SIZE" << endl;
     cout << notVisited.size() << " " << spectrum.size() << endl;
 
@@ -587,4 +587,4 @@ int main() {
         cout << "Reconstructed sequence: " << output << endl;
     return 0;
     }
-
+//POPRAWOIC LOSOWANIE (LOSUJE TEN SAM), NIE DODAJE SCIEKZI Z DIKSRY DTAM DALEJ (WIEMY JAK JEST DLUGA ALE JEJ NIE REALIZUJEMY) JESZCZ :)
