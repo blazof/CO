@@ -214,7 +214,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
 }
 
 vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVisited, vector<string> spectrum, int &finalIndex) {
-    vector<int> vertices;       // Lista wierzchołków do odwiedzenia
+    vector<int> vertices;       // Lista wierzchołków do odwiedzenia (indexy)
     vector<int> toVisit = notVisited;  // Kopia listy wierzchołków, które jeszcze nie zostały odwiedzone
     int index = 0;
 
@@ -225,13 +225,12 @@ vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVi
 
         for (int j = 0; j < spectrum.size(); j++) {
             // Sprawdzamy sąsiadów wylosowanego wierzchołka
-            if (graph[index][j] != 0 && contains(toVisit, j)) {  // Sprawdzamy, czy sąsiad jest nieodwiedzony
+            if (graph[index][j] != 0 && contains(toVisit, j) && index != finalIndex) {  // Sprawdzamy, czy sąsiad jest nieodwiedzony
                 vertices.push_back(index);  // Dodajemy do listy odwiedzonych
                 // Usuwamy wierzchołek z toVisit, używając podejścia z indeksem
                 for (int x = 0; x < toVisit.size(); x++) {
-                    if (toVisit[x] == index) {
-                        toVisit.erase(toVisit.begin() + x);  // Usuwamy element za pomocą indeksu
-                        break;  // Przerywamy po usunięciu
+                    if (x == index) {
+                        toVisit.erase(std::remove(toVisit.begin(), toVisit.end(), x), toVisit.end());                        break;  // Przerywamy po usunięciu
                     }
                 }
                 found = true;
@@ -532,11 +531,11 @@ int main() {
 
 //    TRZEBA NAPRAWIC TO ZE LOSUJE NAM INDEX NA KTORYM SIE ZATRZYMALISMY I DO NIEGO PRZECHODZI!!!!!!!
 
-    cout << "Reconstructed sequence: " << output << endl;
+
     int toVisitPercent = 0.2;
     vector<int> dist(spectrum.size(), INT_MAX);
     pathByOne(notVisited, spectrum, graph, index, output);
-
+    cout << "Reconstructed sequence: " << output << endl;
     cout << "SIZE" << endl;
     cout << notVisited.size() << " " << spectrum.size() << endl;
 
@@ -587,4 +586,4 @@ int main() {
         cout << "Reconstructed sequence: " << output << endl;
     return 0;
     }
-
+//POPRAWOIC LOSOWANIE (LOSUJE TEN SAM), NIE DODAJE SCIEKZI Z DIKSRY DTAM DALEJ (WIEMY JAK JEST DLUGA ALE JEJ NIE REALIZUJEMY) JESZCZ :)
