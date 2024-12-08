@@ -587,7 +587,6 @@ int main() {
                 }
 
 
-
  for(int i =0; i < spectrum.size(); i++){
             for (int j = 0; j < spectrum.size(); j++)
             {
@@ -607,17 +606,7 @@ int main() {
 
     vector<int> parent(spectrum.size(),0);
     vector<int> dist(spectrum.size(),0);
-
- for(int i =0; i < spectrum.size(); i++){
-            for (int j = 0; j < spectrum.size(); j++)
-            {
-                if(graph[i][j] == 0){
-                    graph[i][j] = INT_MAX;
-                }
-            }
-
-        }
-
+    
     dist = distInit(updatedGraph,spectrum.size(),index,parent);
     dijkstra(updatedGraph,spectrum.size(),dist,visited,parent);
     cout << "Final distances from source:" << endl;
