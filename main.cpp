@@ -11,8 +11,6 @@
 #include <stdarg.h>
 #include <strings.h>
 
-#include "levenstein.h"
-
 using namespace std;
 
 template <typename T>
@@ -131,7 +129,7 @@ vector<string> generateIdealSpectrum(const int k, const int n, string& DNA, cons
     string oligonucleotide = "";
 
     for (int i = 0; i <= n - k; i++) {
-        if (i > n - k - 3) {
+        if ((i > n - k - 3) || i==0) {
             oligonucleotide = DNA.substr(i, k);
         } else {
             if (delta_k > 0) {
@@ -214,7 +212,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
 }
 
 vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVisited, vector<string> spectrum, int &finalIndex) {
-    vector<int> vertices;       // Lista wierzchołków do odwiedzenia
+    vector<int> vertices;       // Lista wierzchołków do odwiedzenia (indexy)
     vector<int> toVisit = notVisited;  // Kopia listy wierzchołków, które jeszcze nie zostały odwiedzone
     int index = 0;
 
@@ -225,13 +223,12 @@ vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVi
 
         for (int j = 0; j < spectrum.size(); j++) {
             // Sprawdzamy sąsiadów wylosowanego wierzchołka
-            if (graph[index][j] != 0 && contains(toVisit, j)) {  // Sprawdzamy, czy sąsiad jest nieodwiedzony
+            if (graph[index][j] != 0 && contains(toVisit, j) && index != finalIndex) {  // Sprawdzamy, czy sąsiad jest nieodwiedzony
                 vertices.push_back(index);  // Dodajemy do listy odwiedzonych
                 // Usuwamy wierzchołek z toVisit, używając podejścia z indeksem
                 for (int x = 0; x < toVisit.size(); x++) {
-                    if (toVisit[x] == index) {
-                        toVisit.erase(toVisit.begin() + x);  // Usuwamy element za pomocą indeksu
-                        break;  // Przerywamy po usunięciu
+                    if (x == index) {
+                        toVisit.erase(std::remove(toVisit.begin(), toVisit.end(), x), toVisit.end());                        break;  // Przerywamy po usunięciu
                     }
                 }
                 found = true;
@@ -253,7 +250,6 @@ vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVi
 
     return vertices;
 }
-
 
 vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string>& spectrum, const int delta_k, const int probablePositive) {
     vector<string> positiveErrors;
@@ -287,7 +283,8 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
-void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output) {
+
+void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output,  vector<vector<int>> &updatedGraph) {
     bool progress = true; // Ensure progress to avoid infinite loops
     while (progress && !notVisited.empty()) {
         progress = false;
@@ -310,10 +307,14 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
                 oligo = oligo.substr(shorter - 1, oligo.size());
                 output += oligo;
 
-                // Update `index` and mark vertex as visited
+                // Update index and mark vertex as visited
                 index = pickOnePath[randomPath];
                 //notVisited.erase(find(notVisited.begin(), notVisited.end(), pickOnePath[randomPath]));
                 notVisited.erase(find(notVisited.begin(), notVisited.end(), index));
+                for (int x = 0; x < spectrum.size(); x++) {
+                updatedGraph[index][x]=0;
+                updatedGraph[x][index]=0;
+                }
 //  tutaj zmiana bo musimy ten index usunac
 
 
@@ -327,6 +328,7 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 
     }
 }
+
 void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
     do {
@@ -369,35 +371,142 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
         }
     } while (repeat);
 }
-int minDistance(int dist[], bool sptSet[], int V) {
-    int min = INT_MAX, min_index;
-    for (int v = 0; v < V; v++) {
-        if (sptSet[v] == false && dist[v] <= min) {
-            min = dist[v], min_index = v;
-        }
-    }
-    return min_index;
-}
 
-void dijkstra(const vector<vector<int>> &graph, int src, int V, vector<int> &dist) {
-    bool sptSet[V];  // Tablica sprawdzająca, które wierzchołki zostały odwiedzone
-    fill(dist.begin(), dist.end(), INT_MAX);  // Inicjalizujemy odległości jako nieskończoność
-    fill(sptSet, sptSet + V, false);  // Wszystkie wierzchołki są na początku nieodwiedzone
+using namespace std;
 
-    dist[src] = 0;  // Odległość do samego siebie wynosi 0
+vector<vector<int>> generateGraph(const vector<string>& spectrum, const int delta_k, const int k) {
+    vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(), 0));
 
-    // Pętla Dijkstry
-    for (int count = 0; count < V - 1; count++) {
-        int u = minDistance(dist.data(), sptSet, V);  // Wybieramy wierzchołek o najmniejszej odległości
-        sptSet[u] = true;  // Oznaczamy go jako odwiedzony
+    for (int i = 0; i < spectrum.size(); i++) {
+        for (int j = 0; j < spectrum.size(); j++) {
+            if (i == j) {
+                continue;
+            }
+            int size = min(spectrum[i].size(), spectrum[j].size());
+            string tmp1 = spectrum[i].substr(spectrum[i].size() - size + 1, size - 1);
+            string tmp2 = spectrum[j].substr(0, size - 1);
 
-        // Aktualizujemy odległości sąsiadów
-        for (int v = 0; v < V; v++) {
-            if (!sptSet[v] && graph[u][v] != 0 && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {
-                dist[v] = dist[u] + graph[u][v];
+            if (tmp1 == tmp2) {
+                graph[i][j] = 1;
+                cout << tmp1 << " == " << tmp2 << endl;
+            } else if (k - delta_k > 2) {
+                tmp1 = tmp1.substr(1, tmp1.size() - 1);
+                tmp2 = tmp2.substr(0, tmp2.size() - 1);
+                if (tmp1 == tmp2) {
+                    graph[i][j] = 2;
+                    cout << tmp1 << " == " << tmp2 << endl;
+                } else if (k - delta_k > 3) {
+                    tmp1 = tmp1.substr(1, tmp1.size() - 1);
+                    tmp2 = tmp2.substr(0, tmp2.size() - 1);
+                    if (tmp1 == tmp2) {
+                        graph[i][j] = 3;
+                    }
+                }
             }
         }
     }
+
+    for (int i = 0; i < spectrum.size(); i++) {
+        for (int j = 0; j < spectrum.size(); j++) {
+            cout << graph[i][j] << " ";
+        }
+        cout << endl;
+    }
+    return graph;
+}
+
+string startPath(const vector<string>& spectrum, vector<int>& notVisited, const string primer, int& index, vector<vector<int>>& updatedGraph) {
+    string output = "";
+    for (int i = 0; i < spectrum.size(); i++) {
+        notVisited.push_back(i);
+    }
+
+    for (int i = 0; i < spectrum.size(); i++) {
+        if (spectrum[i] == primer) {
+            index = i;
+            output += spectrum[i];
+            notVisited.erase(find(notVisited.begin(), notVisited.end(), i)); // Safe removal
+
+            for (int x = 0; x < spectrum.size(); x++) {
+                updatedGraph[index][x] = 0;
+                updatedGraph[x][index] = 0;
+            }
+            break;
+        }
+    }
+    return output;
+}
+
+vector<int> distInit(vector<vector<int>> updatedGraph, int V, int index, vector<int>& parent) {
+    vector<int> dist(V, INT_MAX);
+    for (int i = 0; i < V; i++) {
+        parent[i] = i;
+    }
+    dist[index] = 0;
+    return dist;
+}
+
+int getNearest(int V, vector<int> dist, vector<bool> visited) {
+    int minValue = INT_MAX;
+    int minNode = -1;
+    for (int i = 0; i < V; i++) {
+        if (!visited[i] && dist[i] < minValue) {
+            minValue = dist[i];
+            minNode = i;
+        }
+    }
+    return minNode;
+}
+
+void dijkstra(vector<vector<int>> updatedGraph, int V, vector<int>& dist, vector<bool>& visited, vector<int>& parent) {
+    for (int i = 0; i < V; i++) {
+        int nearest = getNearest(V, dist, visited);
+        if (nearest == -1) break; // If no more reachable nodes
+        visited[nearest] = true;
+
+        for (int adj = 0; adj < V; adj++) {
+            if (updatedGraph[nearest][adj] != INT_MAX && dist[adj] > dist[nearest] + updatedGraph[nearest][adj]) {
+                dist[adj] = dist[nearest] + updatedGraph[nearest][adj];
+                parent[adj] = nearest;
+            }
+        }
+    }
+}
+
+void displayDistances(vector<int>& dist, vector<int>& parent, int V, int start) {
+    cout << "Źródło: " << start << endl;
+    cout << "Wierzchołek\tOdległość\tŚcieżka" << endl;
+
+    for (int i = 0; i < V; i++) {
+        if (dist[i] == INT_MAX) {
+            cout << i << "\t\tNIESKOŃCZONE\t-" << endl;
+        } else {
+            cout << i << "\t\t" << dist[i] << "\t\t" << i;
+            int p = parent[i];
+            while (p != start && p != parent[p]) { // Checking to avoid looping back
+                cout << " <- " << p;
+                p = parent[p];
+            }
+            if (p == start) {
+                cout << " <- " << start;
+            }
+            cout << endl;
+        }
+    }
+}
+
+string mergeSequences(const std::string& seq1, const std::string& seq2) {
+    int maxOverlap = 0;
+    int n1 = seq1.size();
+    int n2 = seq2.size();
+
+    for (int i = 1; i <= std::min(n1, n2); i++) {
+        if (seq1.substr(n1 - i) == seq2.substr(0, i)) {
+            maxOverlap = i;
+        }
+    }
+
+    return seq1 + seq2.substr(maxOverlap);
 }
 
 int main() {
@@ -406,185 +515,146 @@ int main() {
     int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
     string input;
     bool repAllowed = true;
-    string DNA, primer, DNADWA;
+    string DNA, primer, DNADWA, output;
     vector<string> idealSpectrum, spectrum, positiveErrors;
+    vector<vector<int>> graph, updatedGraph;
+    vector<int> notVisited;
+    int index = 0;
 
     menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
-
     idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
     primer = idealSpectrum[0];
 
-    cout << "Wygenerowane DNA: " << DNA << endl;
-
-    /* DNADWA = generateDNA(n=400, k=8, delta_k=2, repAllowed=true, nError=0, pError=0, probablePositive=0);
-    cout<< "Drugie DNA:" << DNADWA << endl;                                                   // TUTAJ JEST TEST MIARY LEVENSTEINA - DZIALA!!!
-    cout << "MIARA" << levenshteinDist(DNA, DNADWA) << endl; */
-
-    cout << "Pierwszy oligonukleotyd: " << primer << endl;
-
-    for (const string &element: idealSpectrum) {
-        cout << element << " ";
-    }
-    cout << endl;
-
-    cout << "UWAGA SPEKTRUM!" << endl;
-    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError,
-                                     probablePositive);
+    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
     positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
-
-    for (const string &element: spectrum) {
-        cout << element << " ";
-    }
-    cout << endl;
-
-    cout << "Tylko pozytywne errory" << endl;
-    for (const string &element: positiveErrors) {
-        cout << element << " ";
-    }
-    cout << endl;
-
     spectrum = positiveErrorHandler(spectrum, positiveErrors);
 
-    cout << "UWAGA SPEKTRUM Z POZYTYWNYMI BŁĘDAMI!" << endl;
-    for (const string &element: spectrum) {
-        cout << element << " ";
-    }
-    cout << endl;
-
+    cout << "DNA: " << DNA << endl;
+    cout << "primer: " << primer << endl;
+    cout << "liczba elementow spektrum: " << spectrum.size() << endl;
     sort(spectrum.begin(), spectrum.end());
 
-    cout << "Posortowane spektrum ze wszystkimi błędami" << endl;
-    for (const string &element: spectrum) {
-        cout << element << " ";
+    for (auto spec : spectrum) {
+        cout << spec << " ";
     }
 
+    graph = generateGraph(spectrum, delta_k, k);
+    updatedGraph = graph;
+    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
 
+    pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
+    cout << "Reconstructed sequence: " << output << endl;
 
-    //GRAF MOMENT
-    vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(), 0));
+    for (auto e : notVisited) {
+        cout << e << " ";
+    }
+    cout << endl;
+    cout << "z grafu" << endl;
 
-    for (int i = 0; i < spectrum.size(); i++) {
-        for (int j = 0; j < spectrum.size(); j++) {
-            if (i == j) {
+    while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.3) {
+        vector<bool> visited;
+
+        for (int x = 0; x < spectrum.size(); x++) {
+            updatedGraph[index][x] = graph[index][x];
+            updatedGraph[x][index] = graph[x][index];
+        }
+
+        for (int i = 0; i < spectrum.size(); i++) {
+            for (int j = 0; j < spectrum.size(); j++) {
+                if (updatedGraph[i][j] == 0) {
+                    updatedGraph[i][j] = INT_MAX;
+                }
+            }
+        }
+
+        cout << endl;
+
+        for (int i = 0; i < spectrum.size(); i++) {
+            visited.push_back(0);
+        }
+
+        vector<int> parent(spectrum.size(), 0);
+        vector<int> dist(spectrum.size(), 0);
+
+           for (int i = 0; i < spectrum.size(); i++) {
+            for (int j = 0; j < spectrum.size(); j++) {
+                if (graph[i][j] == 0) {
+                    graph[i][j] = INT_MAX;
+                }
+            }
+        }
+
+        dist = distInit(updatedGraph, spectrum.size(), index, parent);
+        dijkstra(updatedGraph, spectrum.size(), dist, visited, parent);
+
+        cout << "Final distances from source:" << endl;
+        for (int i = 0; i < dist.size(); i++) {
+            if (dist[i] == INT_MAX) cout << i << ": INF" << endl;
+            else cout << i << ": " << dist[i] << " - parent: " << parent[i] << endl;
+        }
+
+        displayDistances(dist, parent, spectrum.size(), index);
+
+        int minValue = INT_MAX;
+        int vertex = -1;
+        vector<int> toMerge;
+        int counter=0;
+        bool end=false;
+        for (int i = 0; i < 50; i++) {
+            counter++;
+            if(counter > spectrum.size()){
+                cout<<"KONIEC"<<endl;
+                end = true;
+                break;
+            }
+            int randomIndex = rand() % spectrum.size();
+            if (randomIndex == index || dist[randomIndex] == INT_MAX) {
+                i--;
                 continue;
             }
-            int size = 0;
-            if (spectrum[i].size() > spectrum[j].size()) {
-                size = spectrum[j].size();
-            } else {
-                size = spectrum[i].size();
+            if (dist[randomIndex] < minValue) {
+                minValue = dist[randomIndex];
+                vertex = randomIndex;
             }
-            //jedynki
-            string tmp1 = spectrum[i].substr(spectrum[i].size() - size + 1, size - 1);
-            string tmp2 = spectrum[j].substr(0, size - 1);
-
-            if (tmp1 == tmp2) {
-                graph[i][j] = 1;
-                cout << tmp1 << " == " << tmp2 << endl;
-            } else if (nError > 0 && k - delta_k > 2) {
-
-                tmp1 = tmp1.substr(1, tmp1.size());
-                tmp2 = tmp2.substr(0, tmp2.size() - 1);
-                if (tmp1 == tmp2) {
-                    graph[i][j] = 2;
-                    cout << tmp1 << " == " << tmp2 << endl;
-                } else if (k - delta_k > 3) {
-                    tmp1 = tmp1.substr(1, tmp1.size());
-                    tmp2 = tmp2.substr(0, tmp2.size() - 1);
-                    if (tmp1 == tmp2) {
-                        graph[i][j] = 3;
-                    }
-                }
-
-            }
-
-
         }
-    }
+         if(end){
+            break;
+        }
+        cout << "Selected vertex: " << vertex << endl;
+        toMerge.push_back(vertex);
 
+        if (minValue == INT_MAX) {
+            cout << "No reachable vertex found" << endl;
+        } else {
+            int p = parent[vertex];
+            while (p != index && p != parent[p]) {
+                cout << " <- " << p;
+                toMerge.push_back(p);
+                p = parent[p];
+            }
+            if (p == index) {
+                cout << " <- " << index;
+            }
+        }
 
-    for (int i = 0; i < spectrum.size(); i++) {
-        for (int j = 0; j < spectrum.size(); j++) {
-            cout << graph[i][j] << " ";
+        reverse(toMerge.begin(), toMerge.end());
+
+        for (int i = 0; i < toMerge.size(); i++) {
+            output = mergeSequences(output, spectrum[toMerge[i]]);
+            notVisited.erase(find(notVisited.begin(), notVisited.end(), toMerge[i]));
         }
         cout << endl;
 
+        index = toMerge[0];
+
+        cout << "Output after Dijkstra: " << output << endl;
+
+        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
+        cout << "Output after path by one: " << output << endl;
+
     }
-    int index = 0;
-    string output = "";
-    vector<int> notVisited;
-
-    // Initialize `notVisited` with all indices
-    for (int i = 0; i < spectrum.size(); i++) {
-        notVisited.push_back(i);
-    }
-
-    // Find the primer in the spectrum and set as the starting point
-    for (int i = 0; i < spectrum.size(); i++) {
-        if (spectrum[i] == primer) {
-            index = i;
-            output += spectrum[i];
-            notVisited.erase(find(notVisited.begin(), notVisited.end(), i)); // Safe removal
-            break;
-        }
-    }
-
-
-//    TRZEBA NAPRAWIC TO ZE LOSUJE NAM INDEX NA KTORYM SIE ZATRZYMALISMY I DO NIEGO PRZECHODZI!!!!!!!
-
-
-    int toVisitPercent = 0.2;
-    vector<int> dist(spectrum.size(), INT_MAX);
-    pathByOne(notVisited, spectrum, graph, index, output);
-    cout << "Reconstructed sequence: " << output << endl;
-    cout << "SIZE" << endl;
-    cout << notVisited.size() << " " << spectrum.size() << endl;
-
-    float condition = static_cast<float>(notVisited.size()) / spectrum.size();
-    cout << "condition = " << condition << endl;
-
-    if (condition > toVisitPercent) {
-        cout << "CHUJ" << endl;
-        vector<int> toVisit = verticesToVisit(graph, notVisited, spectrum, index);
-
-        // Uruchamiamy Dijkstrę raz, obliczamy ścieżki z `index`
-        cout << "Obliczam odległości od wierzchołka: " << index << endl;
-        dijkstra(graph, index, spectrum.size(), dist);
-
-        // Wyświetlamy odległości tylko do wierzchołków w `toVisit`
-        cout << "Odległości do wierzchołków wylosowanych z toVisit:" << endl;
-        int minDist = INT_MAX;
-        int nextVertex = -1;
-
-        for (int vertex : toVisit) {
-            if (dist[vertex] == INT_MAX) {
-                cout << "Do wierzchołka " << vertex << ": brak połączenia (INT_MAX)" << endl;
-            } else {
-                cout << "Do wierzchołka " << vertex << ": " << dist[vertex] << endl;
-
-                // Szukamy najbliższego wierzchołka
-                if (dist[vertex] < minDist) {
-                    minDist = dist[vertex];
-                    nextVertex = vertex;
-                }
-            }
-        }
-
-        // Wybieramy wierzchołek o najmniejszej odległości
-        if (nextVertex != -1) {
-            cout << "Najbliższy wierzchołek do odwiedzenia to: " << nextVertex
-                 << " z odległością: " << minDist << endl;
-        } else {
-            cout << "Nie znaleziono żadnego odpowiedniego wierzchołka do odwiedzenia!" << endl;
-        }
-    }
-
-
-    // pathByOne(notVisited,spectrum,graph,index,output);
-        //cout<<index<<endl;
-        //vector<int> toVisit = verticesToVisit(graph,notVisited,spectrum,index);
-
-        cout << "Reconstructed sequence: " << output << endl;
+    cout<<endl;
+    cout<<"DNA x:"<<DNA<<endl;
+    cout<<"Final: "<<output <<endl;
     return 0;
-    }
-//POPRAWOIC LOSOWANIE (LOSUJE TEN SAM), NIE DODAJE SCIEKZI Z DIKSRY DTAM DALEJ (WIEMY JAK JEST DLUGA ALE JEJ NIE REALIZUJEMY) JESZCZ :)
+}
