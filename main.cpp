@@ -293,7 +293,7 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
-void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph) {
+void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph, vector<int> &seq) {
     bool progress = true; // Ensure progress to avoid infinite loops
     while (progress && !notVisited.empty()) {
         progress = false;
@@ -317,6 +317,7 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
                 // Update index and mark vertex as visited
                 index = pickOnePath[randomPath];
                 notVisited.erase(find(notVisited.begin(), notVisited.end(), index));
+                seq.push_back(index);
                 for (int x = 0; x < spectrum.size(); x++) {
                     if (index < updatedGraph.size() && x < updatedGraph[index].size()) {
                         updatedGraph[index][x] = 0;
@@ -340,8 +341,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
         cout << "     Menu główne" << endl;
         cout << "1. Generator instancji" << endl;
-        cout << "2. Algorytm naiwny" << endl;
-        cout << "3. Metaheurystyka" << endl;
         cin >> choice;
 
         switch (choice) {
@@ -361,12 +360,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
                         cout << "Podałeś złą opcję menu, wybierz jeszcze raz." << endl;
                         repeat = true;
                 }
-                break;
-            case 2:
-                cout << "Naiwny in progress" << endl;
-                break;
-            case 3:
-                cout << "Metaheurystyka in progress" << endl;
                 break;
             default:
                 cout << "Żadna z opcji nie jest prawidłowa. Wybierz jeszcze raz." << endl;
@@ -512,53 +505,9 @@ string mergeSequences(const std::string& seq1, const std::string& seq2) {
     return seq1 + seq2.substr(maxOverlap);
 }
 
-vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V) {
-
-
-}
-
-int main() {
-    srand(static_cast<unsigned>(time(0)));
-
-    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
-    string input;
-    bool repAllowed = true;
-    string DNA, primer, DNADWA, output;
-    vector<string> idealSpectrum, spectrum, positiveErrors;
-    vector<vector<int>> graph, updatedGraph;
-    vector<int> notVisited;
-    int index = 0;
-
-    menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
-    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
-    primer = idealSpectrum[0];
-
-    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
-    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
-    spectrum = positiveErrorHandler(spectrum, positiveErrors);
-
-    cout << "DNA: " << DNA << endl;
-    cout << "primer: " << primer << endl;
-    cout << "liczba elementow spektrum: " << spectrum.size() << endl;
-    sort(spectrum.begin(), spectrum.end());
-
-    int V = spectrum.size();
-    for (auto spec : spectrum) {
-        cout << spec << " ";
-    }
-
-    graph = generateGraph(spectrum, delta_k, k);
-    updatedGraph = graph;
-    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
-
-    pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
-    cout << "Reconstructed sequence: " << output << endl;
-
-    for (auto e : notVisited) {
-        cout << e << " ";
-    }
-    cout << endl;
-    cout << "z grafu" << endl;
+vector<int> greedyAlgorithm(vector<vector<int>> &updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> &notVisited, string &output, string &DNA, vector<int> seq) {
+    vector<int> sequence = seq;
+    pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
 
     while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.2) {
         vector<bool> visited;
@@ -644,6 +593,7 @@ int main() {
         for (int i = 0; i < toMerge.size(); i++) {
             output = mergeSequences(output, spectrum[toMerge[i]]);
             notVisited.erase(find(notVisited.begin(), notVisited.end(), toMerge[i]));
+            sequence.push_back(toMerge[i]);
         }
         cout << endl;
         if(!toMerge.empty()) {
@@ -655,7 +605,7 @@ int main() {
         if(notVisited.empty()) {
             break;
         }
-        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
+        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
         cout << "Output after path by one: " << output << endl;
 
     }
@@ -669,6 +619,104 @@ int main() {
     cout<<"Final: "<<output <<endl;
 
     cout<<"Lev: "<<levenshteinDist(DNA,output)<<endl;
+    return sequence;
+}
+
+
+
+void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string &output, string &DNA, vector<int> &seq) {
+
+    vector<vector<int>> vertexSeq;
+    while (1){
+        cout<<"WYgenerowałeś instancję? ŚWIETNIE. Tu masz 2 menu: "<<endl;
+        cout<<"1. Algorytm naiwny"<<endl;
+        cout<<"2. Metaheurystyka"<<endl;
+        cout<<"3. Wyłącz"<<endl;
+
+        int choice;
+        bool repeat = false;
+        int ones=0;
+
+        cin>>choice;
+        do {
+            switch(choice) {
+                case 1: {
+                    seq = greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
+                    for(int i=0; i<seq.size(); i++) {
+                        cout<<seq[i]<<" ";
+                    }cout<<endl;
+
+                    for(int i=0; i<seq.size()-1; i++) {
+                        if(graph[seq[i]][seq[i+1]]==1) {
+                            ones++;
+                        }
+                    }
+                    cout<<"Ilość 1-ek: "<< ones<<endl;
+                    cout<<"wielkosc seq" << seq.size()<<endl;;
+                }
+                case 2: {
+
+                }
+                case 3: {
+                    return;
+                }
+                default: {
+                    cout<<"Zły wybór"<<endl;
+                    repeat = true;
+                }
+            }
+        }while(repeat);
+    }
+}
+
+int main() {
+    srand(static_cast<unsigned>(time(0)));
+
+    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
+    string input;
+    bool repAllowed = true;
+    string DNA, primer, DNADWA, output;
+    vector<string> idealSpectrum, spectrum, positiveErrors;
+    vector<vector<int>> graph, updatedGraph;
+    vector<int> notVisited, seq;
+    int index = 0;
+
+    menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
+    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
+    primer = idealSpectrum[0];
+
+    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
+    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
+    spectrum = positiveErrorHandler(spectrum, positiveErrors);
+
+    cout << "DNA: " << DNA << endl;
+    cout << "primer: " << primer << endl;
+    cout << "liczba elementow spektrum: " << spectrum.size() << endl;
+    sort(spectrum.begin(), spectrum.end());
+
+    int V = spectrum.size();
+    for (int i = 0; i < spectrum.size(); i++) {
+        cout << spectrum[i] << endl;
+        if(spectrum[i]==primer) {
+            seq.push_back(i);
+        }
+    }
+
+    graph = generateGraph(spectrum, delta_k, k);
+    updatedGraph = graph;
+    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
+
+    cout << "Reconstructed sequence: " << output << endl;
+
+    for (auto e : notVisited) {
+        cout << e << " ";
+    }
+    cout << endl;
+    cout << "z grafu" << endl;
+
+   //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
+    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
+
     return 0;
 }
 //KUEWASD[KSE[O
