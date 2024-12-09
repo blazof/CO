@@ -275,6 +275,17 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
     }
     return positiveErrors;
 }
+bool hasUnvisitedAdj(const vector<vector<int>>& graph, int V, int node, const vector<int>& notVisited) {
+    if (node >= graph.size()) {
+        return false;  // Zabezpieczenie przed błędem
+    }
+    for (int i = 0; i < V; i++) {
+        if (graph[node][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i) != notVisited.end()) {
+            return true;
+        }
+    }
+    return false;
+}
 
 vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector<string>& positiveErrors) {
     vector<string> combinedVector = spectrum;
@@ -283,8 +294,7 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
-
-void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output,  vector<vector<int>> &updatedGraph) {
+void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph) {
     bool progress = true; // Ensure progress to avoid infinite loops
     while (progress && !notVisited.empty()) {
         progress = false;
@@ -292,13 +302,11 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 
         // Iterate through the graph's adjacency matrix for the current index
         for (int i = 0; i < spectrum.size(); i++) {
-
-            if (graph[index][i] == 1 && contains(notVisited, i)) {
+            if (index < graph.size() && i < graph[index].size() && graph[index][i] == 1 && contains(notVisited, i) && hasUnvisitedAdj(updatedGraph, spectrum.size(), i, notVisited)) {
                 pickOnePath.push_back(i);
             }
 
-
-            if(i==spectrum.size()-1 && !pickOnePath.empty()) {
+            if (i == spectrum.size() - 1 && !pickOnePath.empty()) {
                 int randomPath = rand() % pickOnePath.size();
                 string oligo = spectrum[pickOnePath[randomPath]];
                 int shorter = min(spectrum[index].size(), spectrum[pickOnePath[randomPath]].size());
@@ -309,23 +317,19 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 
                 // Update index and mark vertex as visited
                 index = pickOnePath[randomPath];
-                //notVisited.erase(find(notVisited.begin(), notVisited.end(), pickOnePath[randomPath]));
                 notVisited.erase(find(notVisited.begin(), notVisited.end(), index));
                 for (int x = 0; x < spectrum.size(); x++) {
-                updatedGraph[index][x]=0;
-                updatedGraph[x][index]=0;
+                    if (index < updatedGraph.size() && x < updatedGraph[index].size()) {
+                        updatedGraph[index][x] = 0;
+                        updatedGraph[x][index] = 0;
+                    }
                 }
-//  tutaj zmiana bo musimy ten index usunac
-
 
                 progress = true; // Continue to the next vertex
-
                 pickOnePath.clear();
                 break; // Exit the inner loop to process the next vertex
-
             }
         }
-
     }
 }
 
