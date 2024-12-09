@@ -10,6 +10,7 @@
 #include <fstream>
 #include <stdarg.h>
 #include <strings.h>
+#include "levenstein.h"
 
 using namespace std;
 
@@ -275,15 +276,13 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
     }
     return positiveErrors;
 }
-bool hasUnvisitedAdj(const vector<vector<int>>& graph, int V, int node, const vector<int>& notVisited) {
-    if (node >= graph.size()) {
-        return false;  // Zabezpieczenie przed błędem
-    }
-    for (int i = 0; i < V; i++) {
-        if (graph[node][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i) != notVisited.end()) {
+bool hasUnvisitedAdj(vector<vector<int>> updatedGraph, int V, int index, vector<int> &notVisited){
+    for(int i =0; i < V;i++){
+        if(updatedGraph[index][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i)!= notVisited.end()){
             return true;
         }
     }
+
     return false;
 }
 
@@ -513,6 +512,11 @@ string mergeSequences(const std::string& seq1, const std::string& seq2) {
     return seq1 + seq2.substr(maxOverlap);
 }
 
+vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V) {
+
+
+}
+
 int main() {
     srand(static_cast<unsigned>(time(0)));
 
@@ -538,6 +542,7 @@ int main() {
     cout << "liczba elementow spektrum: " << spectrum.size() << endl;
     sort(spectrum.begin(), spectrum.end());
 
+    int V = spectrum.size();
     for (auto spec : spectrum) {
         cout << spec << " ";
     }
@@ -555,7 +560,7 @@ int main() {
     cout << endl;
     cout << "z grafu" << endl;
 
-    while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.3) {
+    while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.2) {
         vector<bool> visited;
 
         for (int x = 0; x < spectrum.size(); x++) {
@@ -580,25 +585,18 @@ int main() {
         vector<int> parent(spectrum.size(), 0);
         vector<int> dist(spectrum.size(), 0);
 
-           for (int i = 0; i < spectrum.size(); i++) {
-            for (int j = 0; j < spectrum.size(); j++) {
-                if (graph[i][j] == 0) {
-                    graph[i][j] = INT_MAX;
-                }
-            }
-        }
 
         dist = distInit(updatedGraph, spectrum.size(), index, parent);
         dijkstra(updatedGraph, spectrum.size(), dist, visited, parent);
 
-        cout << "Final distances from source:" << endl;
+     /*   cout << "Final distances from source:" << endl;
         for (int i = 0; i < dist.size(); i++) {
             if (dist[i] == INT_MAX) cout << i << ": INF" << endl;
             else cout << i << ": " << dist[i] << " - parent: " << parent[i] << endl;
         }
 
         displayDistances(dist, parent, spectrum.size(), index);
-
+*/
         int minValue = INT_MAX;
         int vertex = -1;
         vector<int> toMerge;
@@ -612,7 +610,7 @@ int main() {
                 break;
             }
             int randomIndex = rand() % spectrum.size();
-            if (randomIndex == index || dist[randomIndex] == INT_MAX) {
+            if (randomIndex == index || dist[randomIndex] == INT_MAX || !hasUnvisitedAdj(updatedGraph,V, randomIndex, notVisited)) {
                 i--;
                 continue;
             }
@@ -648,18 +646,29 @@ int main() {
             notVisited.erase(find(notVisited.begin(), notVisited.end(), toMerge[i]));
         }
         cout << endl;
-
-        index = toMerge[0];
-
+        if(!toMerge.empty()) {
+            index = toMerge[0];
+        }
         cout << "Output after Dijkstra: " << output << endl;
 
+
+        if(notVisited.empty()) {
+            break;
+        }
         pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
         cout << "Output after path by one: " << output << endl;
 
     }
     cout<<endl;
-    cout<<"DNA x:"<<DNA<<endl;
+
+    if (output.length() > DNA.length()) {
+        output = output.substr(0, DNA.length());
+    }
+
+    cout<<"DNA x: "<<DNA<<endl;
     cout<<"Final: "<<output <<endl;
+
+    cout<<"Lev: "<<levenshteinDist(DNA,output)<<endl;
     return 0;
 }
 //KUEWASD[KSE[O
