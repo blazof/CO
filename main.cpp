@@ -6,10 +6,13 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <cassert>
 #include <climits>
 #include <fstream>
 #include <stdarg.h>
 #include <strings.h>
+#include "levenstein.h"
+#include <tuple>
 
 using namespace std;
 
@@ -275,15 +278,13 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
     }
     return positiveErrors;
 }
-bool hasUnvisitedAdj(const vector<vector<int>>& graph, int V, int node, const vector<int>& notVisited) {
-    if (node >= graph.size()) {
-        return false;  // Zabezpieczenie przed błędem
-    }
-    for (int i = 0; i < V; i++) {
-        if (graph[node][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i) != notVisited.end()) {
+bool hasUnvisitedAdj(vector<vector<int>> updatedGraph, int V, int index, vector<int> &notVisited){
+    for(int i =0; i < V;i++){
+        if(updatedGraph[index][i] != INT_MAX && find(notVisited.begin(), notVisited.end(), i)!= notVisited.end()){
             return true;
         }
     }
+
     return false;
 }
 
@@ -294,7 +295,7 @@ vector<string> positiveErrorHandler(const vector<string>& spectrum, const vector
     }
     return combinedVector;
 }
-void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph) {
+void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<int>> &graph, int &index, string &output, vector<vector<int>> &updatedGraph, vector<int> &seq) {
     bool progress = true; // Ensure progress to avoid infinite loops
     while (progress && !notVisited.empty()) {
         progress = false;
@@ -302,22 +303,39 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
 
         // Iterate through the graph's adjacency matrix for the current index
         for (int i = 0; i < spectrum.size(); i++) {
-            if (index < graph.size() && i < graph[index].size() && graph[index][i] == 1 && contains(notVisited, i) && hasUnvisitedAdj(updatedGraph, spectrum.size(), i, notVisited)) {
+            if (index < graph.size() && i < graph[index].size() && graph[index][i] == 1 &&
+                contains(notVisited, i) && hasUnvisitedAdj(updatedGraph, spectrum.size(), i, notVisited)) {
                 pickOnePath.push_back(i);
             }
 
             if (i == spectrum.size() - 1 && !pickOnePath.empty()) {
                 int randomPath = rand() % pickOnePath.size();
+
+                // Safeguard: Check if pickOnePath is non-empty
+                assert(!pickOnePath.empty());
+
+                // Append overlapping part to the output
                 string oligo = spectrum[pickOnePath[randomPath]];
                 int shorter = min(spectrum[index].size(), spectrum[pickOnePath[randomPath]].size());
 
-                // Append overlapping part to the output
-                oligo = oligo.substr(shorter - 1, oligo.size());
-                output += oligo;
+                // Safeguard: Ensure shorter > 0 before using substr
+                if (shorter > 0) {
+                    oligo = oligo.substr(shorter - 1, oligo.size());
+                    output += oligo;
+                }
 
                 // Update index and mark vertex as visited
                 index = pickOnePath[randomPath];
-                notVisited.erase(find(notVisited.begin(), notVisited.end(), index));
+
+                // Safeguard: Ensure index exists in notVisited before erasing
+                auto it = find(notVisited.begin(), notVisited.end(), index);
+                if (it != notVisited.end()) {
+                    notVisited.erase(it);
+                }
+
+                seq.push_back(index);
+
+                // Update the adjacency matrix
                 for (int x = 0; x < spectrum.size(); x++) {
                     if (index < updatedGraph.size() && x < updatedGraph[index].size()) {
                         updatedGraph[index][x] = 0;
@@ -332,7 +350,6 @@ void pathByOne(vector<int> &notVisited, vector<string> &spectrum, vector<vector<
         }
     }
 }
-
 void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nError, int &pError, int &probablePositive) {
     bool repeat = false;
     do {
@@ -341,8 +358,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
 
         cout << "     Menu główne" << endl;
         cout << "1. Generator instancji" << endl;
-        cout << "2. Algorytm naiwny" << endl;
-        cout << "3. Metaheurystyka" << endl;
         cin >> choice;
 
         switch (choice) {
@@ -362,12 +377,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
                         cout << "Podałeś złą opcję menu, wybierz jeszcze raz." << endl;
                         repeat = true;
                 }
-                break;
-            case 2:
-                cout << "Naiwny in progress" << endl;
-                break;
-            case 3:
-                cout << "Metaheurystyka in progress" << endl;
                 break;
             default:
                 cout << "Żadna z opcji nie jest prawidłowa. Wybierz jeszcze raz." << endl;
@@ -513,50 +522,34 @@ string mergeSequences(const std::string& seq1, const std::string& seq2) {
     return seq1 + seq2.substr(maxOverlap);
 }
 
-int main() {
-    srand(static_cast<unsigned>(time(0)));
-
-    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
-    string input;
-    bool repAllowed = true;
-    string DNA, primer, DNADWA, output;
-    vector<string> idealSpectrum, spectrum, positiveErrors;
-    vector<vector<int>> graph, updatedGraph;
-    vector<int> notVisited;
-    int index = 0;
-
-    menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
-    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
-    primer = idealSpectrum[0];
-
-    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
-    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
-    spectrum = positiveErrorHandler(spectrum, positiveErrors);
-
-    cout << "DNA: " << DNA << endl;
-    cout << "primer: " << primer << endl;
-    cout << "liczba elementow spektrum: " << spectrum.size() << endl;
-    sort(spectrum.begin(), spectrum.end());
-
-    for (auto spec : spectrum) {
-        cout << spec << " ";
+vector<vector<float>> matrixACO(int V, vector<vector<int>> rankedVertices, vector<float> values, int rankMatrix) {
+    vector<vector<float>> matrix(V, vector<float>(V, 0));
+    for (int i = 0; i < rankMatrix; i++) {
+        for (int j = 0; j < rankedVertices[i].size() - 1; j++) {
+            if (rankedVertices[i][j] < V && rankedVertices[i][j + 1] < V) {
+                matrix[rankedVertices[i][j]][rankedVertices[i][j + 1]] += values[i];
+            } else {
+                cerr << "Index out of bounds in matrixACO: " << rankedVertices[i][j] << " or " << rankedVertices[i][j + 1] << endl;
+            }
+        }
     }
-
-    graph = generateGraph(spectrum, delta_k, k);
-    updatedGraph = graph;
-    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
-
-    pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
-    cout << "Reconstructed sequence: " << output << endl;
-
-    for (auto e : notVisited) {
-        cout << e << " ";
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            cout << matrix[i][j] << " ";
+        }
+        cout << endl;
     }
-    cout << endl;
-    cout << "z grafu" << endl;
+    return matrix;
+}
 
-    while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.3) {
-        vector<bool> visited;
+vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string DNA, vector<int> seq) {
+    vector<int> sequence = seq;
+    pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
+
+    while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.2) {
+        vector<bool> visited(V,false);
+        vector<int> parent(V, 0);
+        vector<int> dist(V, 0);
 
         for (int x = 0; x < spectrum.size(); x++) {
             updatedGraph[index][x] = graph[index][x];
@@ -573,31 +566,19 @@ int main() {
 
         cout << endl;
 
-        for (int i = 0; i < spectrum.size(); i++) {
-            visited.push_back(0);
-        }
 
-        vector<int> parent(spectrum.size(), 0);
-        vector<int> dist(spectrum.size(), 0);
+        dist = distInit(updatedGraph, V, index, parent);
+        dijkstra(updatedGraph, V, dist, visited, parent);
 
-           for (int i = 0; i < spectrum.size(); i++) {
-            for (int j = 0; j < spectrum.size(); j++) {
-                if (graph[i][j] == 0) {
-                    graph[i][j] = INT_MAX;
-                }
-            }
-        }
-
-        dist = distInit(updatedGraph, spectrum.size(), index, parent);
-        dijkstra(updatedGraph, spectrum.size(), dist, visited, parent);
-
-        cout << "Final distances from source:" << endl;
+     /*   cout << "Final distances from source:" << endl;
         for (int i = 0; i < dist.size(); i++) {
             if (dist[i] == INT_MAX) cout << i << ": INF" << endl;
             else cout << i << ": " << dist[i] << " - parent: " << parent[i] << endl;
         }
 
         displayDistances(dist, parent, spectrum.size(), index);
+*/
+        if (notVisited.empty()) break;
 
         int minValue = INT_MAX;
         int vertex = -1;
@@ -612,7 +593,7 @@ int main() {
                 break;
             }
             int randomIndex = rand() % spectrum.size();
-            if (randomIndex == index || dist[randomIndex] == INT_MAX) {
+            if (randomIndex == index || dist[randomIndex] == INT_MAX || !hasUnvisitedAdj(updatedGraph,V, randomIndex, notVisited)) {
                 i--;
                 continue;
             }
@@ -640,26 +621,197 @@ int main() {
                 cout << " <- " << index;
             }
         }
+        if(toMerge.size() > 0) {
+            reverse(toMerge.begin(), toMerge.end());
 
-        reverse(toMerge.begin(), toMerge.end());
+            for (int i = 0; i < toMerge.size(); i++) {
+                output = mergeSequences(output, spectrum[toMerge[i]]);
+                auto it = std::find(notVisited.begin(), notVisited.end(), toMerge[i]);
+                if (it != notVisited.end()) {
+                    notVisited.erase(it);
+                }
+                sequence.push_back(toMerge[i]);
+            }
+            index = toMerge[0];
 
-        for (int i = 0; i < toMerge.size(); i++) {
-            output = mergeSequences(output, spectrum[toMerge[i]]);
-            notVisited.erase(find(notVisited.begin(), notVisited.end(), toMerge[i]));
         }
-        cout << endl;
 
-        index = toMerge[0];
+        cout << endl;
 
         cout << "Output after Dijkstra: " << output << endl;
 
-        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
+
+        if(notVisited.empty()) {
+            break;
+        }
+
+        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
         cout << "Output after path by one: " << output << endl;
 
     }
     cout<<endl;
-    cout<<"DNA x:"<<DNA<<endl;
+
+    if (output.length() > DNA.length()) {
+        output = output.substr(0, DNA.length());
+    }
+
+    cout<<"DNA x: "<<DNA<<endl;
     cout<<"Final: "<<output <<endl;
+
+    cout<<"Lev: "<<levenshteinDist(DNA,output)<<endl;
+    return sequence;
+}
+
+string ACO(int param, int rankMatrix, int V, string output, vector<vector<int>> updatedGraph, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string &DNA, vector<int> seq) {
+    vector<float> values = {1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1};
+    vector<vector<float>> matrix(V, vector<float>(V, 0));
+    vector<vector<int>> rankedVertices;
+    vector<int> ones(param, 0);
+
+    for (int i = 0; i < param; i++) {
+        rankedVertices.push_back(greedyAlgorithm(updatedGraph, V, graph, spectrum, index, notVisited, output, DNA, seq));
+        for (int j = 0; j < rankedVertices[i].size() - 1; j++) {
+            if (rankedVertices[i][j] < V && rankedVertices[i][j + 1] < V) {
+                if (graph[rankedVertices[i][j]][rankedVertices[i][j + 1]] == 1) {
+                    ones[i]++;
+                }
+            } else {
+                cerr << "Index out of bounds in ACO: " << rankedVertices[i][j] << " or " << rankedVertices[i][j + 1] << endl;
+            }
+        }
+    }
+
+    // Tworzenie wektora par (ones, {rankedVertices, size})
+    vector<tuple<int, vector<int>, size_t>> paired;
+    for (int i = 0; i < param; i++) {
+        paired.push_back(make_tuple(ones[i], rankedVertices[i], rankedVertices[i].size()));
+    }
+
+    // Sortowanie par według wartości `ones` malejąco, a następnie według rozmiaru `rankedVertices`
+    sort(paired.begin(), paired.end(), [](const tuple<int, vector<int>, size_t> &a, const tuple<int, vector<int>, size_t> &b) {
+        if (get<0>(a) == get<0>(b)) {
+            return get<2>(a) > get<2>(b);
+        }
+        return get<0>(a) > get<0>(b);
+    });
+
+    // Rozdzielenie posortowanych par z powrotem na `rankedVertices` i `ones`
+    for (int i = 0; i < param; i++) {
+        ones[i] = get<0>(paired[i]);
+        rankedVertices[i] = get<1>(paired[i]);
+    }
+
+    // Wyświetlanie posortowanych wyników
+    for (int i = 0; i < param; i++) {
+        for (int j = 0; j < rankedVertices[i].size(); j++) {
+            cout << rankedVertices[i][j] << " ";
+        }
+        cout << endl;
+        cout << ones[i] << endl;
+        cout << rankedVertices[i].size() << endl;
+    }
+
+    matrix = matrixACO(V, rankedVertices, values, rankMatrix);
+    return output;
+}
+
+
+void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string &DNA, vector<int> &seq) {
+
+    vector<vector<int>> vertexSeq;
+    while (1){
+
+        vector<int> sequence = seq;
+        cout<<"WYgenerowałeś instancję? ŚWIETNIE. Tu masz 2 menu: "<<endl;
+        cout<<"1. Algorytm naiwny"<<endl;
+        cout<<"2. Metaheurystyka"<<endl;
+        cout<<"3. Wyłącz"<<endl;
+
+        int choice;
+        bool repeat = false;
+        int ones=0;
+
+            cin>>choice;
+            switch(choice) {
+                case 1: {
+                    sequence = greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,sequence);
+                    for(int i=0; i<sequence.size(); i++) {
+                        cout<<sequence[i]<<" ";
+                    }cout<<endl;
+
+                    for(int i=0; i<sequence.size()-1; i++) {
+                        if(graph[sequence[i]][sequence[i+1]]==1) {
+                            ones++;
+                        }
+                    }
+                    cout<<"Ilość 1-ek: "<< ones<<endl;
+                    cout<<"wielkosc seq" << sequence.size()<<endl;;
+                    break;
+                }
+                case 2: {
+                cout<< ACO(20,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence)<<endl;
+                    break;
+                }
+                case 3: {
+                    return;
+                    break;
+                }
+                default: {
+                    cout<<"Zły wybór"<<endl;
+                }
+            }
+
+    }
+}
+
+int main() {
+    srand(static_cast<unsigned>(time(0)));
+
+    int n = 400, k = 8, delta_k = 2, nError = 0, pError = 0, probablePositive = 0;
+    string input;
+    bool repAllowed = true;
+    string DNA, primer, DNADWA, output;
+    vector<string> idealSpectrum, spectrum, positiveErrors;
+    vector<vector<int>> graph, updatedGraph;
+    vector<int> notVisited, seq;
+    int index = 0;
+
+    menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
+    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
+    primer = idealSpectrum[0];
+
+    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
+    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
+    spectrum = positiveErrorHandler(spectrum, positiveErrors);
+
+    cout << "DNA: " << DNA << endl;
+    cout << "primer: " << primer << endl;
+    cout << "liczba elementow spektrum: " << spectrum.size() << endl;
+    sort(spectrum.begin(), spectrum.end());
+
+    int V = spectrum.size();
+    for (int i = 0; i < spectrum.size(); i++) {
+        cout << spectrum[i] << endl;
+        if(spectrum[i]==primer) {
+            seq.push_back(i);
+        }
+    }
+
+    graph = generateGraph(spectrum, delta_k, k);
+    updatedGraph = graph;
+    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
+
+    cout << "Reconstructed sequence: " << output << endl;
+
+    for (auto e : notVisited) {
+        cout << e << " ";
+    }
+    cout << endl;
+    cout << "z grafu" << endl;
+
+   //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
+    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
+
     return 0;
 }
 //KUEWASD[KSE[O
