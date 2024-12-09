@@ -637,15 +637,15 @@ vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vect
         }
 
         cout << endl;
+    if(!toMerge.empty()) {
+        index = toMerge[0];
+    }
 
         cout << "Output after Dijkstra: " << output << endl;
-
-
-        if(notVisited.empty()) {
+        if(notVisited.empty()){
             break;
         }
-
-        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
+        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
         cout << "Output after path by one: " << output << endl;
 
     }
