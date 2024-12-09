@@ -84,11 +84,11 @@ string generateDNA(int &n, int &k, int &delta_k, bool &repAllowed, int &nError, 
     cout << "Czy powtórzenia są dozwolone? T/N (domyślnie T): ";
     getline(cin, input);
     if (!input.empty()) {
-       if (input == "N") {
-           repAllowed = false;
-       }else {
-           repAllowed = true;
-       }
+        if (input == "N") {
+            repAllowed = false;
+        }else {
+            repAllowed = true;
+        }
     }
 
     // Wczytywanie liczby błędów negatywnych z domyślną wartością
@@ -198,17 +198,17 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     }
     */
 
-        for (int i = 0; i < difference; i++) {
-            if (!uniqueVec.empty()) {
-                while (true) {
-                    int position = rand() % uniqueVec.size();
-                    if (uniqueVec[position] != primer) {
-                        uniqueVec.erase(uniqueVec.begin() + position);
-                        break;
-                    }
+    for (int i = 0; i < difference; i++) {
+        if (!uniqueVec.empty()) {
+            while (true) {
+                int position = rand() % uniqueVec.size();
+                if (uniqueVec[position] != primer) {
+                    uniqueVec.erase(uniqueVec.begin() + position);
+                    break;
                 }
             }
         }
+    }
 
 
     return uniqueVec;
@@ -570,14 +570,14 @@ vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vect
         dist = distInit(updatedGraph, V, index, parent);
         dijkstra(updatedGraph, V, dist, visited, parent);
 
-     /*   cout << "Final distances from source:" << endl;
-        for (int i = 0; i < dist.size(); i++) {
-            if (dist[i] == INT_MAX) cout << i << ": INF" << endl;
-            else cout << i << ": " << dist[i] << " - parent: " << parent[i] << endl;
-        }
+        /*   cout << "Final distances from source:" << endl;
+           for (int i = 0; i < dist.size(); i++) {
+               if (dist[i] == INT_MAX) cout << i << ": INF" << endl;
+               else cout << i << ": " << dist[i] << " - parent: " << parent[i] << endl;
+           }
 
-        displayDistances(dist, parent, spectrum.size(), index);
-*/
+           displayDistances(dist, parent, spectrum.size(), index);
+   */
         if (notVisited.empty()) break;
 
         int minValue = INT_MAX;
@@ -602,7 +602,7 @@ vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vect
                 vertex = randomIndex;
             }
         }
-         if(end){
+        if(end){
             break;
         }
         cout << "Selected vertex: " << vertex << endl;
@@ -637,15 +637,15 @@ vector<int> greedyAlgorithm(vector<vector<int>> updatedGraph, int V, vector<vect
         }
 
         cout << endl;
-    if(!toMerge.empty()) {
-        index = toMerge[0];
-    }
 
         cout << "Output after Dijkstra: " << output << endl;
-        if(notVisited.empty()){
+
+
+        if(notVisited.empty()) {
             break;
         }
-        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph);
+
+        pathByOne(notVisited, spectrum, graph, index, output, updatedGraph,sequence);
         cout << "Output after path by one: " << output << endl;
 
     }
@@ -731,35 +731,35 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
         bool repeat = false;
         int ones=0;
 
-            cin>>choice;
-            switch(choice) {
-                case 1: {
-                    sequence = greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,sequence);
-                    for(int i=0; i<sequence.size(); i++) {
-                        cout<<sequence[i]<<" ";
-                    }cout<<endl;
+        cin>>choice;
+        switch(choice) {
+            case 1: {
+                sequence = greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,sequence);
+                for(int i=0; i<sequence.size(); i++) {
+                    cout<<sequence[i]<<" ";
+                }cout<<endl;
 
-                    for(int i=0; i<sequence.size()-1; i++) {
-                        if(graph[sequence[i]][sequence[i+1]]==1) {
-                            ones++;
-                        }
+                for(int i=0; i<sequence.size()-1; i++) {
+                    if(graph[sequence[i]][sequence[i+1]]==1) {
+                        ones++;
                     }
-                    cout<<"Ilość 1-ek: "<< ones<<endl;
-                    cout<<"wielkosc seq" << sequence.size()<<endl;;
-                    break;
                 }
-                case 2: {
-                cout<< ACO(20,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence)<<endl;
-                    break;
-                }
-                case 3: {
-                    return;
-                    break;
-                }
-                default: {
-                    cout<<"Zły wybór"<<endl;
-                }
+                cout<<"Ilość 1-ek: "<< ones<<endl;
+                cout<<"wielkosc seq" << sequence.size()<<endl;;
+                break;
             }
+            case 2: {
+                cout<< ACO(20,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence)<<endl;
+                break;
+            }
+            case 3: {
+                return;
+                break;
+            }
+            default: {
+                cout<<"Zły wybór"<<endl;
+            }
+        }
 
     }
 }
@@ -809,7 +809,7 @@ int main() {
     cout << endl;
     cout << "z grafu" << endl;
 
-   //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
+    //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
     secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
 
     return 0;
