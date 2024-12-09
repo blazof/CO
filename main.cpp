@@ -372,7 +372,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
     } while (repeat);
 }
 
-
 using namespace std;
 
 vector<vector<int>> generateGraph(const vector<string>& spectrum, const int delta_k, const int k) {
@@ -520,7 +519,6 @@ int main() {
     vector<string> idealSpectrum, spectrum, positiveErrors;
     vector<vector<int>> graph, updatedGraph;
     vector<int> notVisited;
-    vector<bool> visited;
     int index = 0;
 
     menu(DNA, n, k, delta_k, repAllowed, nError, pError, probablePositive);
@@ -554,6 +552,8 @@ int main() {
     cout << "z grafu" << endl;
 
     while (static_cast<float>(notVisited.size()) / spectrum.size() > 0.3) {
+        vector<bool> visited;
+
         for (int x = 0; x < spectrum.size(); x++) {
             updatedGraph[index][x] = graph[index][x];
             updatedGraph[x][index] = graph[x][index];
@@ -600,7 +600,7 @@ int main() {
         vector<int> toMerge;
         int counter=0;
         bool end=false;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 50; i++) {
             counter++;
             if(counter > spectrum.size()){
                 cout<<"KONIEC"<<endl;
