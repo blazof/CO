@@ -1069,6 +1069,8 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
 
                 //tutaj ile jest porytego grafu - potrzebne do zwiekszania prawopodobienstwa wyboru macierzy
                 float percentCovered = output.size() / n;
+
+                //PROCENT UZYCIA MACIERZY
                 drawPercentage = percentCovered*1.6;
             }
             outputs.push_back(output);
@@ -1197,7 +1199,7 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                 break;
             }
             case 4: {
-
+                vector<string> najlepsze;
                 int iter=0, inst=0;
                 cout<<"Ile razy checesz zmianiac parametry?: ";
                 cin>>iter;
@@ -1205,8 +1207,12 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                 cin>>inst;
                 vector<int> params;
                 int param=0;
+                seq.clear();
+                sequence.clear();
+
                 //do przechowywania wynikow i liczenia z nich srednich - wielkosc ilosc iteracji to wiersze, ilosc kolumn to ilosc instancji bo kazda zrobiona to wynik lev
                 vector<vector<int>> levensteinDistances(iter, vector<int>(inst, 0));
+                vector<int> greedys;
 
                 for(int i=0; i<iter; i++) {
                 //Tutaj zapetlony mrowkowy
@@ -1218,6 +1224,9 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
 
 
                 for(int j=0; j < inst; j++){
+                    seq.clear();
+                    sequence.clear();
+
                     cout<<"Generacja nowego DNA i spektrum na podstawie podanych wczesniej wartosci dla instancji numer: " << j+1 << endl;
                     DNA="";
                     for (int x = 0; x< n; x++) {
@@ -1225,10 +1234,12 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                         char generatedNucleotide = nucleotides[rand() % 4];
                         DNA += generatedNucleotide;
                     }
+                    cout<<DNA<<endl;
 
                     vector<string> idealSpectrum, positiveErrors;
                     string primer;
                     idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
+
                     primer = idealSpectrum[0];
 
                     spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
@@ -1238,6 +1249,25 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                     graph = generateGraph(spectrum, delta_k, k);
                     updatedGraph = graph;
                     output = startPath(spectrum, notVisited, primer, index, updatedGraph);
+                    for (int i = 0; i < spectrum.size(); i++) {
+                  //      cout << spectrum[i] << endl;
+                        if(spectrum[i]==primer) {
+                            seq.push_back(i);
+                            sequence.push_back(i);
+                        }
+                    }
+
+
+                    vector<int> seque = greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq);
+                    string tekst="";
+                    for(int i=0; i<seque.size(); i++) {
+                      //  cout<<seque[i]<<" ";
+                        tekst = mergeSequences(tekst, spectrum[seque[i]]);
+
+                    }
+                    greedys.push_back(levenshteinDist(DNA,tekst));
+                    cout<<endl;
+
 
                 for(int z=0; z<params.size(); z++) {
                     topSolutions.clear();
@@ -1247,7 +1277,7 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                     rankingACO(matrix,100,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence);
 
                     // tutaj DOPASUJ W ODPOWIEDNIE MIEJSCE PARAMETRY KTORE CHCESZ ZMIENIAC!! params[z]
-                    initACO(DNA,params[z],30,50,15,index,matrix,graph, V,spectrum, n);
+                    initACO(DNA,params[z],30,10,15,index,matrix,graph, V,spectrum, n);
 
 
 
@@ -1287,9 +1317,11 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                     topSolutions[i] = get<1>(paired[i]);
                 }
 
+
                 string winner="";
                 for (int i = 0; i < topSolutions[0].size(); i++) {
                     winner = mergeSequences(winner, spectrum[topSolutions[0][i]]);
+
                 }
 
                 levensteinDistances[z][j] = levenshteinDist(DNA,winner);
@@ -1319,6 +1351,15 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                     cout<<"Parametr: "<<params[g]<<" Średni wynik: "<< avgs[g]<<" "<<endl;
                 }
                 cout<<"-------------------------------------------------------"<<endl;
+
+                cout<<"-------------------------------------------------------"<<endl;
+
+                cout<<"Greedy dla tych"<<endl;
+                for(int l=0; l<greedys.size(); l++) {
+                    cout<<greedys[l]<<" ";
+                }
+                cout<<endl;
+
 
 
             }
