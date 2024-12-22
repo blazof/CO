@@ -13,6 +13,8 @@
 #include <strings.h>
 #include "levenstein.h"
 #include <tuple>
+#include <numeric>
+#include <omp.h>
 
 using namespace std;
 vector<vector<int>> topSolutions;
@@ -21,6 +23,7 @@ template <typename T>
 bool contains(const vector<T>& vec, const T& value) {
     return find(vec.begin(), vec.end(), value) != vec.end();
 }
+
 string mergeSequences(const std::string& seq1, const std::string& seq2) {
     int maxOverlap = 0;
     int n1 = seq1.size();
@@ -195,7 +198,7 @@ vector<string> negativeErrorsHandler(const vector<string>& spectrum, const int n
     vector<string> uniqueVec(uniqueSet.begin(), uniqueSet.end());
 
     difference = nError - repeats;
-    cout<<"Powtórzenia: "<< repeats <<endl;
+   // cout<<"Powtórzenia: "<< repeats <<endl;
     /*
     cout << "Powtórzenia: " << repeats << "Czy chcesz kontynować (w przeciwnym razie instancja będzie generowana na nowo. T/N (domyślnie T)" << endl;
 
@@ -269,6 +272,7 @@ vector<int> verticesToVisit(const vector<vector<int>> &graph, vector<int> &notVi
 
 vector<string> positiveErrorGenerator(const int pError, const int k, const vector<string>& spectrum, const int delta_k, const int probablePositive) {
     vector<string> positiveErrors;
+
     if(pError%2 != 0 || probablePositive == false) {
     for (int i = 0; i < pError; i++) {
         string positiveError;
@@ -292,8 +296,25 @@ vector<string> positiveErrorGenerator(const int pError, const int k, const vecto
 
     }else {
         for (int i = 0; i < pError/2; i++) {
+            const char nucleotides[4] = {'A', 'C', 'T', 'G'};
+
             int randomNucleotide = rand() % spectrum.size();
             string toModification = spectrum[randomNucleotide];
+
+            string firstError = toModification, secondErrion = toModification;
+
+            //w srodku zamieninone
+            do {
+                firstError[toModification.size()/2] = nucleotides[rand() % 4];
+
+            }while (toModification[toModification.size()/2] != firstError[toModification.size()/2]);
+            //na koncu zamienione
+            do {
+                secondErrion[toModification.size()-1] = nucleotides[rand() % 4];
+            }while (toModification[toModification.size()/2] != firstError[toModification.size()/2]);
+
+            positiveErrors.push_back(firstError);
+            positiveErrors.push_back(secondErrion);
         }
     }
     return positiveErrors;
@@ -407,7 +428,6 @@ void menu(string &DNA, int &n, int &k, int &delta_k, bool &repAllowed, int &nErr
     } while (repeat);
 }
 
-
 vector<vector<int>> generateGraph(const vector<string>& spectrum, const int delta_k, const int k) {
     vector<vector<int>> graph(spectrum.size(), vector<int>(spectrum.size(), 0));
 
@@ -448,6 +468,7 @@ vector<vector<int>> generateGraph(const vector<string>& spectrum, const int delt
     //}
     return graph;
 }
+
 string startPath(const vector<string>& spectrum, vector<int>& notVisited, const string primer, int& index, vector<vector<int>>& updatedGraph) {
     string output = "";
     for (int i = 0; i < spectrum.size(); i++) {
@@ -505,6 +526,7 @@ void dijkstra(vector<vector<int>> updatedGraph, int V, vector<int>& dist, vector
         }
     }
 }
+
 /*
 void displayDistances(vector<int>& dist, vector<int>& parent, int V, int start) {
     cout << "Źródło: " << start << endl;
@@ -527,7 +549,6 @@ void displayDistances(vector<int>& dist, vector<int>& parent, int V, int start) 
         }
     }
 }*/
-
 
 vector<vector<float>> matrixACO(int V, vector<vector<int>> rankedVertices, vector<float> values, int rankMatrix) {
     vector<vector<float>> matrix(V, vector<float>(V, 0));
@@ -1048,7 +1069,7 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
 
                 //tutaj ile jest porytego grafu - potrzebne do zwiekszania prawopodobienstwa wyboru macierzy
                 float percentCovered = output.size() / n;
-                drawPercentage = percentCovered*1.8;
+                drawPercentage = percentCovered*1.6;
             }
             outputs.push_back(output);
             // Wypisanie aktualnej ścieżki mrówki
@@ -1066,7 +1087,7 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
     }
 }
 
-void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string &DNA, vector<int> &seq, int n) {
+void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> graph, vector<string> &spectrum, int index, vector<int> notVisited, string output, string &DNA, vector<int> &seq, int n, int nError,int k, int pError,int delta_k, bool repAllowed, int probablePositive ) {
 
     vector<vector<int>> vertexSeq;
     while (1){
@@ -1076,7 +1097,7 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
         cout<<"1. Algorytm naiwny"<<endl;
         cout<<"2. Metaheurystyka"<<endl;
         cout<<"3. Wyłącz"<<endl;
-        cout<<"3. Testy!!!!!"<<endl;
+        cout<<"4. Testy!!!!!"<<endl;
 
         int choice;
         bool repeat = false;
@@ -1177,6 +1198,129 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
             }
             case 4: {
 
+                int iter=0, inst=0;
+                cout<<"Ile razy checesz zmianiac parametry?: ";
+                cin>>iter;
+                cout<<"Na ilu instancjach chcesz testy?: ";
+                cin>>inst;
+                vector<int> params;
+                int param=0;
+                //do przechowywania wynikow i liczenia z nich srednich - wielkosc ilosc iteracji to wiersze, ilosc kolumn to ilosc instancji bo kazda zrobiona to wynik lev
+                vector<vector<int>> levensteinDistances(iter, vector<int>(inst, 0));
+
+                for(int i=0; i<iter; i++) {
+                //Tutaj zapetlony mrowkowy
+
+                cout <<"Iteracja: "<< i+1 <<endl<< " Podaj ten parametr ktory chcesz zmieniac (PAMIETAJ, ŻEBY W KODZIE BYŁ USTAWIONY W DOBRYM MIEJSCU DO TESTÓW! : ";
+                    cin>>param;
+                    params.push_back(param);
+                }
+
+
+                for(int j=0; j < inst; j++){
+                    cout<<"Generacja nowego DNA i spektrum na podstawie podanych wczesniej wartosci dla instancji numer: " << j+1 << endl;
+                    DNA="";
+                    for (int x = 0; x< n; x++) {
+                        const char nucleotides[] = {'A', 'C', 'T', 'G'};
+                        char generatedNucleotide = nucleotides[rand() % 4];
+                        DNA += generatedNucleotide;
+                    }
+
+                    vector<string> idealSpectrum, positiveErrors;
+                    string primer;
+                    idealSpectrum = generateIdealSpectrum(k, n, DNA, delta_k, repAllowed);
+                    primer = idealSpectrum[0];
+
+                    spectrum = negativeErrorsHandler(idealSpectrum, nError, primer, n, k, delta_k, repAllowed, pError, probablePositive);
+                    positiveErrors = positiveErrorGenerator(pError, k, spectrum, delta_k, probablePositive);
+                    spectrum = positiveErrorHandler(spectrum, positiveErrors);
+                    V = spectrum.size();
+                    graph = generateGraph(spectrum, delta_k, k);
+                    updatedGraph = graph;
+                    output = startPath(spectrum, notVisited, primer, index, updatedGraph);
+
+                for(int z=0; z<params.size(); z++) {
+                    topSolutions.clear();
+
+                    vector<vector<float>> matrix(V, vector<float>(V, 0));
+                    //tutaj tworzenie rankingu na podstawie greedy
+                    rankingACO(matrix,100,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence);
+
+                    // tutaj DOPASUJ W ODPOWIEDNIE MIEJSCE PARAMETRY KTORE CHCESZ ZMIENIAC!! params[z]
+                    initACO(DNA,params[z],30,50,15,index,matrix,graph, V,spectrum, n);
+
+
+
+
+                vector<int> ones(topSolutions.size(), 0); // param - ile wierzcholkow jest w rankingu
+                int param = topSolutions.size();
+
+                for (int i = 0; i < param; i++) {
+                    for (int v = 0; v < topSolutions[i].size() - 1; v++) {
+                        if (topSolutions[i][v] < V && topSolutions[i][v + 1] < V) {
+                            if (graph[topSolutions[i][v]][topSolutions[i][v + 1]] == 1) {
+                                ones[i]++;
+                            }
+                        } else {
+                            cerr << "Index out of bounds in ACO: " << topSolutions[i][j] << " or " << topSolutions[i][j + 1] << endl;
+                        }
+                    }
+                }
+
+                // Tworzenie wektora par (ones, {rankedVertices, size})
+                vector<tuple<int, vector<int>, size_t>> paired;
+                for (int i = 0; i < param; i++) {
+                    paired.push_back(make_tuple(ones[i], topSolutions[i], topSolutions[i].size()));
+                }
+
+                // Sortowanie par według wartości `ones` malejąco, a następnie według rozmiaru `rankedVertices`
+                sort(paired.begin(), paired.end(), [](const tuple<int, vector<int>, size_t> &a, const tuple<int, vector<int>, size_t> &b) {
+                    if (get<0>(a) == get<0>(b)) {
+                        return get<2>(a) > get<2>(b);
+                    }
+                    return get<0>(a) > get<0>(b);
+                });
+
+                // Rozdzielenie posortowanych par z powrotem na `rankedVertices` i `ones`
+                for (int i = 0; i < param; i++) {
+                    ones[i] = get<0>(paired[i]);
+                    topSolutions[i] = get<1>(paired[i]);
+                }
+
+                string winner="";
+                for (int i = 0; i < topSolutions[0].size(); i++) {
+                    winner = mergeSequences(winner, spectrum[topSolutions[0][i]]);
+                }
+
+                levensteinDistances[z][j] = levenshteinDist(DNA,winner);
+
+
+                }
+
+
+                }
+
+                vector<int> avgs;
+                for(int b=0; b < levensteinDistances.size(); b++) {
+                    double sum = std::accumulate(levensteinDistances[b].begin(), levensteinDistances[b].end(), 0.0);
+                    // Obliczenie średniej
+                    double avg = sum / levensteinDistances[b].size();
+                    avgs.push_back(avg);
+                    for(int c=0; c < levensteinDistances[b].size(); c++) {
+                        cout<<levensteinDistances[b][c]<<" ";
+
+                    }
+                    cout<<endl;
+                }
+
+                cout<<"-------------------------------------------------------"<<endl;
+                cout<<"WYLICZONE ŚREDNIE"<<endl;
+                for(int g=0; g<avgs.size(); g++) {
+                    cout<<"Parametr: "<<params[g]<<" Średni wynik: "<< avgs[g]<<" "<<endl;
+                }
+                cout<<"-------------------------------------------------------"<<endl;
+
+
             }
             default: {
                 cout<<"Zły wybór"<<endl;
@@ -1232,7 +1376,7 @@ int main() {
     cout << "z grafu" << endl;
 
     //vertexSequences.push_back( greedyAlgorithm(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq));
-    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq,n);
+    secondMenu(updatedGraph,V,graph,spectrum,index,notVisited,output, DNA,seq,n,nError,k,pError,delta_k,repAllowed,probablePositive);
 
     return 0;
 }
