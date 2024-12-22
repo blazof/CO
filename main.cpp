@@ -1071,7 +1071,7 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
                 float percentCovered = output.size() / n;
 
                 //PROCENT UZYCIA MACIERZY
-                drawPercentage = percentCovered*1.6;
+                drawPercentage = percentCovered*1.8;
             }
             outputs.push_back(output);
             // Wypisanie aktualnej ścieżki mrówki
@@ -1357,7 +1357,14 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                 cout<<"Greedy dla tych"<<endl;
                 for(int l=0; l<greedys.size(); l++) {
                     cout<<greedys[l]<<" ";
+                    double sum = std::accumulate(greedys.begin(), greedys.end(), 0.0);
+                    // Obliczenie średniej
+                    double avg = sum / greedys.size();
+                    avgs.push_back(avg);
                 }
+                cout<<endl;
+                cout<<"Średnia greedy"<<endl;
+                cout<<avgs[avgs.size()-1]<<" "<<endl;
                 cout<<endl;
 
 
