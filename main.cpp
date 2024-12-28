@@ -14,7 +14,6 @@
 #include "levenstein.h"
 #include <tuple>
 #include <numeric>
-#include <omp.h>
 
 using namespace std;
 vector<vector<int>> topSolutions;
