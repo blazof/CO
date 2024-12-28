@@ -880,7 +880,7 @@ for(int i = 0; i < rankedVertices[0].size(); i++) {
 }
 
 //jako index nalezy przekazac primer!!!!
-void initACO(string DNA,int ants, int smoothing, int interations, float firstDrawPercentage, int index, vector<vector<float>> matrix, vector<vector<int>> graph, int V, vector<string> spectrum, int n) {
+void initACO(string DNA,int ants, int smoothing, int interations, float firstDrawPercentage, int index, vector<vector<float>> matrix, vector<vector<int>> graph, int V, vector<string> spectrum, int n, float DUPLICATION) {
     float drawPercentage = firstDrawPercentage;
     vector<vector<int>> updatedGraph = graph;
 
@@ -943,6 +943,9 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
                             repeat = false;
                             int randomVertex = rand() % V;
 
+                            if(solutions[i].size() == spectrum.size()) {
+                                con = false;
+                            }
                             if (contains(solutions[i], randomVertex)) {
                                 repeat = true; // Jeśli już odwiedziliśmy ten wierzchołek, losujemy dalej
                             } else {
@@ -1063,15 +1066,20 @@ void initACO(string DNA,int ants, int smoothing, int interations, float firstDra
                         }
                     }
                     }else {
+
                         //cout<<"Brak wierzcholkow z macierzy :<<"<<endl;
                     }
                 }
 
                 //tutaj ile jest porytego grafu - potrzebne do zwiekszania prawopodobienstwa wyboru macierzy
-                float percentCovered = output.size() / n;
+                float percentCovered = output.size() / n*100;
 
                 //PROCENT UZYCIA MACIERZY
-                drawPercentage = percentCovered*1.8;
+                drawPercentage = percentCovered* DUPLICATION;
+
+                if(drawPercentage> 90) {
+                    drawPercentage = 90;
+                }
             }
             outputs.push_back(output);
             // Wypisanie aktualnej ścieżki mrówki
@@ -1137,7 +1145,7 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                 auto start = std::chrono::high_resolution_clock::now();
                 vector<vector<float>> matrix(V, vector<float>(V, 0));
                 rankingACO(matrix,50,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence);
-                initACO(DNA,100,30,50,10,index,matrix,graph, V,spectrum, n);
+                initACO(DNA,100,30,50,10,index,matrix,graph, V,spectrum, n, 1.3);
                 auto end = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()/1000000.0;
 
@@ -1276,8 +1284,8 @@ void secondMenu(vector<vector<int>> updatedGraph, int &V, vector<vector<int>> gr
                     //tutaj tworzenie rankingu na podstawie greedy
                     rankingACO(matrix,100,10,V,output,updatedGraph,graph,spectrum,index,notVisited, DNA,sequence);
 
-                    // tutaj DOPASUJ W ODPOWIEDNIE MIEJSCE PARAMETRY KTORE CHCESZ ZMIENIAC!! params[z]
-                    initACO(DNA,params[z],30,10,15,index,matrix,graph, V,spectrum, n);
+                    // tutaj DOPASUJ W ODPOWIEDNIE MIEJSCE PARAMETRY KTORE CHCESZ ZMIENIAC!! params[z] - OSTATNI O DODANY DO MNOZENIA IM SZYBCIEEJE WZLATUJE % MACIERZY
+                    initACO(DNA,params[z],30,10,15,index,matrix,graph, V,spectrum, n, 1.3);
 
 
 
